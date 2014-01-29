@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl -W
 
 ############################################################################
 #
@@ -45,6 +45,7 @@ my %opt = (
     dir      => undef,
     size_min => undef,           
     size_max => undef,
+    output   => undef,
     hash     => 'MD5',
 );
 
@@ -55,6 +56,7 @@ my $cmd = basename($0);
 my $file_processed = {
     size => {},
     dup  => {},
+    stat => {},
 };
 
 #------------------------------------------------
@@ -74,6 +76,8 @@ sub file_crawler {
   ADD_FILES: {
         last ADD_FILES unless -f $file_name;
 
+        $file_processed->{stat}{file_processed}++;
+
         my $file_size = get_file_size($file_name);
 
         last ADD_FILES 
@@ -84,6 +88,7 @@ sub file_crawler {
                 defined $opt{size_max} && $file_size >= $opt{size_max}
             ;
 
+        $file_processed->{stat}{file_added}++;
         push @{ $file_processed->{size}{$file_size} }, $file_name;
     }
 }
@@ -110,7 +115,7 @@ sub find_duplicates {
             push @{ $file_processed->{dup}{$file_size}{$hash} }, $file_name;
         }
 
-        # remove not duplicate hashes
+        # remove unique hashes (no duplicates)
         for my $hash ( keys %{ $file_processed->{dup}{$file_size} } ) {
             if ( scalar @{ $file_processed->{dup}{$file_size}{$hash} } < 2 ) {
                 delete $file_processed->{dup}{$file_size}{$hash};
@@ -118,8 +123,11 @@ sub find_duplicates {
         }
 
         # remove file sizes with no duplicate
-        if ( scalar keys %{ $file_processed->{dup}{$file_size} } == 0 ) {
+        my $hash_molteplicity = scalar keys %{ $file_processed->{dup}{$file_size} };
+        if ( $hash_molteplicity == 0 ) {
             delete $file_processed->{dup}{$file_size};
+        } else {
+            $file_processed->{stat}{file_duplicated} += $hash_molteplicity;
         }
 
     }    # FIND_DUP
@@ -133,6 +141,8 @@ sub hash_file {
         return undef;
     }
 
+    $file_processed->{stat}{file_hash_calculated}++;
+
     binmode(F);
     my $digest = Digest::MD5->new->addfile(*F);
     close(F);
@@ -144,6 +154,17 @@ sub hash_file {
 #------------------------------------------------
 sub print_duplicates {
 
+    # open output file (default STDOUT)
+    my $out;
+    my $outfile = $opt{out};
+
+    if (defined $outfile){
+        open($out, ">", $outfile) 
+            or die "cannot open > $outfile: $!";
+    } else {
+        $out = *STDOUT;
+    }
+
     # descending file size
     for my $file_size ( sort { $b <=> $a } keys %{ $file_processed->{dup} } ) {
 
@@ -154,11 +175,29 @@ sub print_duplicates {
             for my $file_name (
                 sort @{ $file_processed->{dup}{$file_size}{$hash} } )
             {
-                printf "%s\n", $file_name;
+                printf $out "%s\n", $file_name;
             }
-            print "\n";
+            print $out "\n";
         }
     }
+    
+    close($out);
+}
+
+sub init_stat {
+    for (qw(file_processed file_added file_hash_calculated file_duplicated)){
+        $file_processed->{stat}{$_} = 0;
+    }
+}
+
+sub print_stat {
+    my $stat = $file_processed->{stat};
+    printf STDERR "\n\nSTATS:\n";
+    printf STDERR "   processed files  : %d\n", $stat->{file_processed};
+    printf STDERR "   analyzed files   : %d\n", $stat->{file_added};
+    printf STDERR "   hash calulated   : %d\n", $stat->{file_hash_calculated};
+    printf STDERR "   duplicated files : %d\n", $stat->{file_duplicated};
+    printf STDERR "\n";
 }
 
 sub usage {
@@ -178,6 +217,7 @@ DESCRIPTION
 Files with same size are compared by MD5 hash to detect duplicates.
 
 OPTIONS
+    --out              Output file name (default stdout)
     --size_min         Don't compare files with size less than size_min
     --size_max         Don't compare files with size larger than size_max
     --help             This help
@@ -208,6 +248,7 @@ GetOptions(
     'help!',
     'size_min=i',
     'size_max=i',
+    'out=s',
   )
   or usage;
 
@@ -230,10 +271,14 @@ unless ( -d $opt{dir} ) {
     
 }
 
+init_stat;
+
 dir_crawler( $opt{dir} );
 
 find_duplicates;
 
 print_duplicates;
+
+print_stat;
 
 exit 0;
