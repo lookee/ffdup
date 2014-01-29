@@ -42,7 +42,7 @@ my $VERSION = '0.0.1';
 
 # Set defaults
 my %opt = (
-    dir      => $ARGV[0],
+    dir      => undef,
     size_min => undef,           
     size_max => undef,
     hash     => 'MD5',
@@ -214,6 +214,8 @@ GetOptions(
 # show usage
 usage if $opt{help};
 
+# get the root dir
+$opt{dir}=$ARGV[0];
 
 # check params
 unless ( -d $opt{dir} ) {
