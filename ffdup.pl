@@ -31,7 +31,7 @@ use utf8;
 use Cwd;
 use Data::Dumper;
 use Digest::MD5;
-#use Digest::SHA;
+use Digest::SHA;
 use File::Basename;
 use File::Find;
 use Getopt::Long;
@@ -39,6 +39,10 @@ use Getopt::Long;
 # Global Variables
 
 my $VERSION = '0.0.1';
+
+# output file handle
+my $STDOUT  = *STDOUT;
+my $STATOUT = *STDERR;
 
 # Set defaults
 my %opt = (
@@ -144,7 +148,10 @@ sub hash_file {
     $file_processed->{stat}{file_hash_calculated}++;
 
     binmode(F);
-    my $digest = Digest::MD5->new->addfile(*F);
+    my $digest = 
+        $opt{hash} eq 'MD5'     ? Digest::MD5->new->addfile(*F)     :
+        $opt{hash} eq 'SHA1'    ? Digest::SHA1->new->addfile(*F)    :
+        die sprintf "wrong hash algorithm '%s'\n", $opt{hash}||'';
     close(F);
     return $digest->b64digest;
 }
@@ -152,18 +159,23 @@ sub hash_file {
 #------------------------------------------------
 # O U T P U T
 #------------------------------------------------
-sub print_duplicates {
 
+sub init_out_file {
     # open output file (default STDOUT)
-    my $out;
     my $outfile = $opt{out};
 
     if (defined $outfile){
-        open($out, ">", $outfile) 
+        open($STDOUT, ">", $outfile) 
             or die "cannot open > $outfile: $!";
     } else {
-        $out = *STDOUT;
     }
+}
+
+sub close_out_file {
+    close $STDOUT;
+}
+
+sub print_duplicates {
 
     # descending file size
     for my $file_size ( sort { $b <=> $a } keys %{ $file_processed->{dup} } ) {
@@ -175,13 +187,11 @@ sub print_duplicates {
             for my $file_name (
                 sort @{ $file_processed->{dup}{$file_size}{$hash} } )
             {
-                printf $out "%s\n", $file_name;
+                printf $STDOUT "%s\n", $file_name;
             }
-            print $out "\n";
+            print $STDOUT "\n";
         }
-    }
-    
-    close($out);
+    }    
 }
 
 sub init_stat {
@@ -192,7 +202,7 @@ sub init_stat {
 
 sub print_stat {
     my $stat = $file_processed->{stat};
-    printf STDERR "\n\nSTATS:\n";
+    printf STDERR "\nSTATS:\n";
     printf STDERR "   processed files  : %d\n", $stat->{file_processed};
     printf STDERR "   analyzed files   : %d\n", $stat->{file_added};
     printf STDERR "   hash calulated   : %d\n", $stat->{file_hash_calculated};
@@ -271,6 +281,8 @@ unless ( -d $opt{dir} ) {
     
 }
 
+init_out_file;
+
 init_stat;
 
 dir_crawler( $opt{dir} );
@@ -280,5 +292,7 @@ find_duplicates;
 print_duplicates;
 
 print_stat;
+
+close_out_file;
 
 exit 0;
