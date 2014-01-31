@@ -38,6 +38,7 @@ use File::Basename;
 use File::Find;
 #use File::Compare;
 use Getopt::Long;
+use Time::HiRes qw(time);
 
 # Global Variables
 
@@ -171,15 +172,15 @@ sub hash_file {
 
 sub human_readable_size {
     my $num = shift;
-    return $num unless $num =~ /^\d+$/;
-    return sprintf("%dk", round_size($num/1024**1)) if ($num < 1024**2);
-    return sprintf("%dM", round_size($num/1024**2)) if ($num < 1024**3);
-    return sprintf("%dG", round_size($num/1024**3)) if ($num < 1024**4);
-    return sprintf("%dT", round_size($num/1024**4)) if ($num < 1024**5);
-    return sprintf("%dP", round_size($num/1024**5)) if ($num < 1024**6);
-    return sprintf("%dE", round_size($num/1024**6)) if ($num < 1024**7);
-    return sprintf("%dZ", round_size($num/1024**7)) if ($num < 1024**8);
-    return sprintf("%dE", round_size($num/1024**8)) if ($num < 1024**9);
+    #return $num unless $num =~ /^\d+$/;
+    return sprintf("%d kB", round_size($num/1024**1)) if ($num < 1024**2);
+    return sprintf("%d MB", round_size($num/1024**2)) if ($num < 1024**3);
+    return sprintf("%d GB", round_size($num/1024**3)) if ($num < 1024**4);
+    return sprintf("%d TB", round_size($num/1024**4)) if ($num < 1024**5);
+    return sprintf("%d PB", round_size($num/1024**5)) if ($num < 1024**6);
+    return sprintf("%d EB", round_size($num/1024**6)) if ($num < 1024**7);
+    return sprintf("%d ZB", round_size($num/1024**7)) if ($num < 1024**8);
+    return sprintf("%d EB", round_size($num/1024**8)) if ($num < 1024**9);
     return $num;
 }
 
@@ -232,6 +233,7 @@ sub print_duplicates {
 }
 
 sub init_stat {
+    $file_processed->{stat}{time_start} = time;
     for (qw(    file_processed 
                 file_added 
                 file_size_added 
@@ -244,16 +246,32 @@ sub init_stat {
     }
 }
 
+sub stop_stat {
+    $file_processed->{stat}{time_end} = time;
+    $file_processed->{stat}{time_execution} = 
+        $file_processed->{stat}{time_end} - 
+        $file_processed->{stat}{time_start};
+    if ($file_processed->{stat}{time_execution} > 0){
+        $file_processed->{stat}{troughput_all} = 
+            1000 * 
+            $file_processed->{stat}{file_size_added} / 
+            $file_processed->{stat}{time_execution};
+    }
+}
+
 sub print_stat {
     my $stat = $file_processed->{stat};
     printf $STDERR "\nSTATS:\n";
+    printf $STDERR "   duplicated files      : %d\n", $stat->{file_duplicated};
+    printf $STDERR "   duplicated files size : %s\n", human_readable_size($stat->{file_size_duplicated});
     printf $STDERR "   processed files       : %d\n", $stat->{file_processed};
     printf $STDERR "   analyzed files        : %d\n", $stat->{file_added};
     printf $STDERR "   analyzed files size   : %s\n", human_readable_size($stat->{file_size_added});
+    printf $STDERR "   execution time        : %.3f ms\n", $file_processed->{stat}{time_execution};
+    printf $STDERR "   throughput            : %s\\s\n", human_readable_size($file_processed->{stat}{troughput_all})
+        if defined $file_processed->{stat}{troughput_all};
     printf $STDERR "   hash calulated        : %d\n", $stat->{file_hash_calculated};
     printf $STDERR "   hash calculated size  : %s\n", human_readable_size($stat->{file_hash_size_calculated});
-    printf $STDERR "   duplicated files      : %d\n", $stat->{file_duplicated};
-    printf $STDERR "   duplicated files size : %s\n", human_readable_size($stat->{file_size_duplicated});
     printf $STDERR "   hash algorithm        : %s\n", $opt{hash};
     printf $STDERR "\n";
 }
@@ -340,6 +358,8 @@ dir_crawler( $opt{dir} );
 find_duplicates;
 
 print_duplicates;
+
+stop_stat;
 
 print_stat;
 
