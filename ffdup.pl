@@ -96,8 +96,10 @@ sub file_crawler {
                 defined $opt{size_max} && $file_size >= $opt{size_max}
             ;
 
-        $file_processed->{stat}{file_added}++;
         push @{ $file_processed->{size}{$file_size} }, $file_name;
+        
+        $file_processed->{stat}{file_added}++;
+        $file_processed->{stat}{file_size_added} += $file_size;
     }
 }
 
@@ -122,6 +124,7 @@ sub find_duplicates {
             next FIND_DUP unless defined $hash;
             push @{ $file_processed->{dup}{$file_size}{$hash} }, $file_name;
             $file_processed->{stat}{file_hash_calculated}++;
+            $file_processed->{stat}{file_hash_size_calculated}+= $file_size;
         }
 
         # remove unique hashes (no duplicates)
@@ -132,7 +135,9 @@ sub find_duplicates {
                 delete $file_processed->{dup}{$file_size}{$hash};
             } else {
                 $file_processed->{stat}{file_duplicated} += 
-                    $hash_multiplicity; 
+                    $hash_multiplicity - 1;
+                $file_processed->{stat}{file_size_duplicated} += 
+                    $file_size * ($hash_multiplicity -1);
             }
         }
 
@@ -227,7 +232,14 @@ sub print_duplicates {
 }
 
 sub init_stat {
-    for (qw(file_processed file_added file_hash_calculated file_duplicated)){
+    for (qw(    file_processed 
+                file_added 
+                file_size_added 
+                file_hash_calculated
+                file_hash_size_calculated 
+                file_duplicated
+                file_size_duplicated
+        )){
         $file_processed->{stat}{$_} = 0;
     }
 }
@@ -235,11 +247,14 @@ sub init_stat {
 sub print_stat {
     my $stat = $file_processed->{stat};
     printf $STDERR "\nSTATS:\n";
-    printf $STDERR "   processed files  : %d\n", $stat->{file_processed};
-    printf $STDERR "   analyzed files   : %d\n", $stat->{file_added};
-    printf $STDERR "   hash calulated   : %d\n", $stat->{file_hash_calculated};
-    printf $STDERR "   duplicated files : %d\n", $stat->{file_duplicated};
-    printf $STDERR "   hash             : %s\n", $opt{hash};
+    printf $STDERR "   processed files       : %d\n", $stat->{file_processed};
+    printf $STDERR "   analyzed files        : %d\n", $stat->{file_added};
+    printf $STDERR "   analyzed files size   : %s\n", human_readable_size($stat->{file_size_added});
+    printf $STDERR "   hash calulated        : %d\n", $stat->{file_hash_calculated};
+    printf $STDERR "   hash calculated size  : %s\n", human_readable_size($stat->{file_hash_size_calculated});
+    printf $STDERR "   duplicated files      : %d\n", $stat->{file_duplicated};
+    printf $STDERR "   duplicated files size : %s\n", human_readable_size($stat->{file_size_duplicated});
+    printf $STDERR "   hash algorithm        : %s\n", $opt{hash};
     printf $STDERR "\n";
 }
 
