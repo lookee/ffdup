@@ -117,23 +117,25 @@ sub find_duplicates {
             my $hash = hash_file($file_name);
             next FIND_DUP unless defined $hash;
             push @{ $file_processed->{dup}{$file_size}{$hash} }, $file_name;
+            $file_processed->{stat}{file_hash_calculated}++;
         }
 
         # remove unique hashes (no duplicates)
         for my $hash ( keys %{ $file_processed->{dup}{$file_size} } ) {
-            if ( scalar @{ $file_processed->{dup}{$file_size}{$hash} } < 2 ) {
+            my $hash_multiplicity = 
+                scalar @{ $file_processed->{dup}{$file_size}{$hash} };
+            if ( $hash_multiplicity < 2 ) {
                 delete $file_processed->{dup}{$file_size}{$hash};
+            } else {
+                $file_processed->{stat}{file_duplicated} += 
+                    $hash_multiplicity; 
             }
         }
 
         # remove file sizes with no duplicate
-        my $hash_molteplicity = scalar keys %{ $file_processed->{dup}{$file_size} };
-        if ( $hash_molteplicity == 0 ) {
+        if ( scalar keys %{ $file_processed->{dup}{$file_size} } == 0 ) {
             delete $file_processed->{dup}{$file_size};
-        } else {
-            $file_processed->{stat}{file_duplicated} += $hash_molteplicity;
         }
-
     }    # FIND_DUP
 }
 
@@ -144,8 +146,6 @@ sub hash_file {
         print $STDERR "Can't open '$file' for reading: $!\n";
         return undef;
     }
-
-    $file_processed->{stat}{file_hash_calculated}++;
 
     binmode(F);
     my $digest = 
