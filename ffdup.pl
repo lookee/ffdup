@@ -42,7 +42,7 @@ my $VERSION = '0.0.1';
 
 # output file handle
 my $STDOUT  = *STDOUT;
-my $STATOUT = *STDERR;
+my $STDERR = *STDERR;
 
 # Set defaults
 my %opt = (
@@ -141,7 +141,7 @@ sub hash_file {
     my $file = shift;
 
     unless ( open( F, $file ) ) {
-        print STDERR "Can't open '$file' for reading: $!\n";
+        print $STDERR "Can't open '$file' for reading: $!\n";
         return undef;
     }
 
@@ -202,12 +202,12 @@ sub init_stat {
 
 sub print_stat {
     my $stat = $file_processed->{stat};
-    printf STDERR "\nSTATS:\n";
-    printf STDERR "   processed files  : %d\n", $stat->{file_processed};
-    printf STDERR "   analyzed files   : %d\n", $stat->{file_added};
-    printf STDERR "   hash calulated   : %d\n", $stat->{file_hash_calculated};
-    printf STDERR "   duplicated files : %d\n", $stat->{file_duplicated};
-    printf STDERR "\n";
+    printf $STDERR "\nSTATS:\n";
+    printf $STDERR "   processed files  : %d\n", $stat->{file_processed};
+    printf $STDERR "   analyzed files   : %d\n", $stat->{file_added};
+    printf $STDERR "   hash calulated   : %d\n", $stat->{file_hash_calculated};
+    printf $STDERR "   duplicated files : %d\n", $stat->{file_duplicated};
+    printf $STDERR "\n";
 }
 
 sub usage {
