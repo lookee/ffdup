@@ -24,6 +24,8 @@
 #
 ############################################################################
 
+# vim: set autoindent expandtab tabstop=4 shiftwidth=4 shiftround
+
 use strict;
 use warnings;
 use utf8;
@@ -34,6 +36,7 @@ use Digest::MD5;
 use Digest::SHA;
 use File::Basename;
 use File::Find;
+#use File::Compare;
 use Getopt::Long;
 
 # Global Variables
@@ -42,15 +45,16 @@ my $VERSION = '0.0.1';
 
 # output file handle
 my $STDOUT  = *STDOUT;
-my $STDERR = *STDERR;
+my $STDERR  = *STDERR;
 
 # Set defaults
 my %opt = (
-    dir      => undef,
-    size_min => undef,           
-    size_max => undef,
-    output   => undef,
-    hash     => 'MD5',
+    dir         => undef,
+    size_min    => undef,           
+    size_max    => undef,
+    print_size  => undef,
+    output      => undef,
+    hash        => 'SHA256',
 );
 
 # global variables
@@ -149,18 +153,41 @@ sub hash_file {
 
     binmode(F);
     my $digest = 
-        $opt{hash} eq 'MD5'     ? Digest::MD5->new->addfile(*F)     :
-        $opt{hash} eq 'SHA1'    ? Digest::SHA1->new->addfile(*F)    :
+        $opt{hash} eq 'MD5'     ? Digest::MD5->new->addfile(*F)         :
+        $opt{hash} eq 'SHA256'  ? Digest::SHA->new(256)->addfile(*F)    :
         die sprintf "wrong hash algorithm '%s'\n", $opt{hash}||'';
     close(F);
     return $digest->b64digest;
 }
 
 #------------------------------------------------
+# T O O L S 
+#------------------------------------------------
+
+sub human_readable_size {
+    my $num = shift;
+    return $num unless $num =~ /^\d+$/;
+    return sprintf("%dk", round_size($num/1024**1)) if ($num < 1024**2);
+    return sprintf("%dM", round_size($num/1024**2)) if ($num < 1024**3);
+    return sprintf("%dG", round_size($num/1024**3)) if ($num < 1024**4);
+    return sprintf("%dT", round_size($num/1024**4)) if ($num < 1024**5);
+    return sprintf("%dP", round_size($num/1024**5)) if ($num < 1024**6);
+    return sprintf("%dE", round_size($num/1024**6)) if ($num < 1024**7);
+    return sprintf("%dZ", round_size($num/1024**7)) if ($num < 1024**8);
+    return sprintf("%dE", round_size($num/1024**8)) if ($num < 1024**9);
+    return $num;
+}
+
+sub round_size {
+    my $num = shift;
+    return sprintf("%d", $num+0.5);
+}
+
+#------------------------------------------------
 # O U T P U T
 #------------------------------------------------
 
-sub init_out_file {
+sub init_out_streams {
     # open output file (default STDOUT)
     my $outfile = $opt{out};
 
@@ -171,14 +198,19 @@ sub init_out_file {
     }
 }
 
-sub close_out_file {
+sub close_out_streams {
     close $STDOUT;
+    close $STDERR;
 }
 
 sub print_duplicates {
 
     # descending file size
     for my $file_size ( sort { $b <=> $a } keys %{ $file_processed->{dup} } ) {
+
+        if ($opt{print_size}){
+            printf $STDOUT "# size: %s\n", human_readable_size($file_size);
+        }
 
         # every hash collect duplicates
         for my $hash ( sort keys %{ $file_processed->{dup}{$file_size} } ) {
@@ -207,6 +239,7 @@ sub print_stat {
     printf $STDERR "   analyzed files   : %d\n", $stat->{file_added};
     printf $STDERR "   hash calulated   : %d\n", $stat->{file_hash_calculated};
     printf $STDERR "   duplicated files : %d\n", $stat->{file_duplicated};
+    printf $STDERR "   hash             : %s\n", $opt{hash};
     printf $STDERR "\n";
 }
 
@@ -228,6 +261,7 @@ Files with same size are compared by MD5 hash to detect duplicates.
 
 OPTIONS
     --out              Output file name (default stdout)
+    --print_size       Print file size
     --size_min         Don't compare files with size less than size_min
     --size_max         Don't compare files with size larger than size_max
     --help             This help
@@ -245,7 +279,7 @@ WARRANTY, to the extent permitted by law.
                               
 EOTEXT
 
-    exit 1;
+    exit 2;
 }
 
 #------------------------------------------------
@@ -258,6 +292,7 @@ GetOptions(
     'help!',
     'size_min=i',
     'size_max=i',
+    'print_size!',
     'out=s',
   )
   or usage;
@@ -281,7 +316,7 @@ unless ( -d $opt{dir} ) {
     
 }
 
-init_out_file;
+init_out_streams;
 
 init_stat;
 
@@ -293,6 +328,6 @@ print_duplicates;
 
 print_stat;
 
-close_out_file;
+close_out_streams;
 
 exit 0;
