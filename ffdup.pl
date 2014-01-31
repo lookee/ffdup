@@ -213,9 +213,9 @@ sub print_stat {
 sub usage {
     my $msg = shift;
     
-    print $msg, "\n" if defined $msg;
+    print $STDERR $msg, "\n" if defined $msg;
     
-    print <<EOTEXT;
+    print $STDERR <<EOTEXT;
 
 NAME
 ffdup $VERSION - Light duplicate file finder written in Perl
