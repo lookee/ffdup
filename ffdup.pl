@@ -121,7 +121,7 @@ sub find_duplicates {
 
         # calculate hash only for file with the same size
         for my $file_name (@files_with_same_size) {
-            my $hash = hash_file($file_name);
+            my $hash = hash_file($file_name,$file_size);
             next FIND_DUP unless defined $hash;
             push @{ $file_processed->{dup}{$file_size}{$hash} }, $file_name;
             $file_processed->{stat}{file_hash_calculated}++;
@@ -150,7 +150,9 @@ sub find_duplicates {
 }
 
 sub hash_file {
-    my $file = shift;
+    my ($file, $file_size) = @_;
+
+    my $hash_start_time = time;
 
     unless ( open( F, $file ) ) {
         print $STDERR "Can't open '$file' for reading: $!\n";
@@ -163,6 +165,9 @@ sub hash_file {
         $opt{hash} eq 'SHA256'  ? Digest::SHA->new(256)->addfile(*F)    :
         die sprintf "wrong hash algorithm '%s'\n", $opt{hash}||'';
     close(F);
+
+    $file_processed->{stat}{time_hash} += time - $hash_start_time;
+
     return $digest->b64digest;
 }
 
@@ -241,21 +246,32 @@ sub init_stat {
                 file_hash_size_calculated 
                 file_duplicated
                 file_size_duplicated
+                time_hash
         )){
         $file_processed->{stat}{$_} = 0;
     }
 }
 
 sub stop_stat {
+
     $file_processed->{stat}{time_end} = time;
+
     $file_processed->{stat}{time_execution} = 
         $file_processed->{stat}{time_end} - 
         $file_processed->{stat}{time_start};
+
     if ($file_processed->{stat}{time_execution} > 0){
         $file_processed->{stat}{troughput_all} = 
             1000 * 
             $file_processed->{stat}{file_size_added} / 
             $file_processed->{stat}{time_execution};
+    }
+
+    if ($file_processed->{stat}{time_hash} > 0){
+        $file_processed->{stat}{troughput_hash} = 
+            1000 * 
+            $file_processed->{stat}{file_hash_size_calculated} / 
+            $file_processed->{stat}{time_hash};
     }
 }
 
@@ -272,6 +288,9 @@ sub print_stat {
         if defined $file_processed->{stat}{troughput_all};
     printf $STDERR "   hash calulated        : %d\n", $stat->{file_hash_calculated};
     printf $STDERR "   hash calculated size  : %s\n", human_readable_size($stat->{file_hash_size_calculated});
+    printf $STDERR "   hash time             : %.3f ms\n", $file_processed->{stat}{time_hash};
+    printf $STDERR "   hash throughput       : %s\\s\n", human_readable_size($file_processed->{stat}{troughput_hash})
+        if defined $file_processed->{stat}{troughput_all};
     printf $STDERR "   hash algorithm        : %s\n", $opt{hash};
     printf $STDERR "\n";
 }
