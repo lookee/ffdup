@@ -4,7 +4,7 @@
 #
 # ffdup 0.0.1
 #
-# Duplicate files finder witten in Perl using standard libraries
+# Light duplicate files finder witten in Perl
 # Luca Amore - luca.amore at gmail.com - <http://www.lucaamore.com>
 #
 # Git repository available at http://github.com/...
@@ -56,6 +56,7 @@ my %opt = (
     print_size  => undef,
     output      => undef,
     hash        => 'SHA256',
+    verbose     => undef,
 );
 
 # global variables
@@ -119,6 +120,13 @@ sub find_duplicates {
 
         next FIND_DUP if scalar @files_with_same_size < 2;
 
+        if ($opt{verbose}){
+            printf $STDERR "processing hash: %s size : %s duplicates: %d\n",
+                human_readable_size($file_size), 
+                $opt{hash}, 
+                scalar @files_with_same_size;
+        }
+
         # calculate hash only for file with the same size
         for my $file_name (@files_with_same_size) {
             my $hash = hash_file($file_name,$file_size);
@@ -126,7 +134,10 @@ sub find_duplicates {
             push @{ $file_processed->{dup}{$file_size}{$hash} }, $file_name;
             $file_processed->{stat}{file_hash_calculated}++;
             $file_processed->{stat}{file_hash_size_calculated}+= $file_size;
+            print $STDERR '*' if ($opt{verbose});
         }
+
+        print $STDERR "\n" if ($opt{verbose});
 
         # remove unique hashes (no duplicates)
         for my $hash ( keys %{ $file_processed->{dup}{$file_size} } ) {
@@ -316,6 +327,7 @@ OPTIONS
     --print_size       Print file size
     --size_min         Don't compare files with size less than size_min
     --size_max         Don't compare files with size larger than size_max
+    --verbose          Print debug messages
     --help             This help
 
 AUTHOR
@@ -346,6 +358,7 @@ GetOptions(
     'size_max=i',
     'print_size!',
     'out=s',
+    'verbose!',
   )
   or usage;
 
@@ -356,23 +369,26 @@ usage if $opt{help};
 $opt{dir}=$ARGV[0];
 
 # check params
-unless ( -d $opt{dir} ) {
 
-    if (defined $opt{dir}){
-        print 'cannot open root dir : ' . $opt{dir} . "\n";
-    } else {
-    	print "missing mandatory DIR parameter\n"
-    }
-    
+unless ( defined $opt{dir} ) {
+    print "missing mandatory DIR parameter\n";
     usage();
-    
+}
+
+unless ( -d $opt{dir} ) {
+    print 'cannot open root dir : ' . $opt{dir} . "\n";
+    usage();
 }
 
 init_out_streams;
 
 init_stat;
 
+print $STDERR "crawlig directories\n" if ($opt{verbose});
+
 dir_crawler( $opt{dir} );
+
+print $STDERR "find duplicates\n" if ($opt{verbose});
 
 find_duplicates;
 
