@@ -121,7 +121,7 @@ sub find_duplicates {
         next FIND_DUP if scalar @files_with_same_size < 2;
 
         if ($opt{verbose}){
-            printf $STDERR "processing hash: %s size : %s duplicates: %d\n",
+            printf $STDERR "processing hash: %s size : %s files: %d\n",
                 human_readable_size($file_size), 
                 $opt{hash}, 
                 scalar @files_with_same_size;
@@ -179,6 +179,8 @@ sub hash_file {
 
     $file_processed->{stat}{time_hash} += time - $hash_start_time;
 
+    #sleep(rand(2));
+
     return $digest->b64digest;
 }
 
@@ -189,6 +191,7 @@ sub hash_file {
 sub human_readable_size {
     my $num = shift;
     #return $num unless $num =~ /^\d+$/;
+    return sprintf("%d B" , round_size($num        )) if ($num < 1024**1);
     return sprintf("%d kB", round_size($num/1024**1)) if ($num < 1024**2);
     return sprintf("%d MB", round_size($num/1024**2)) if ($num < 1024**3);
     return sprintf("%d GB", round_size($num/1024**3)) if ($num < 1024**4);
