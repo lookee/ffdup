@@ -1,8 +1,10 @@
 #!/usr/bin/perl -W
 
+my $VERSION = '0.0.2';
+
 ############################################################################
 #
-# ffdup 0.0.1
+# ffdup
 #
 # Light duplicate files finder witten in Perl
 # Luca Amore - luca.amore at gmail.com - <http://www.lucaamore.com>
@@ -41,8 +43,6 @@ use Getopt::Long;
 use Time::HiRes qw(time);
 
 # Global Variables
-
-my $VERSION = '0.0.1';
 
 # output file handle
 my $STDOUT  = *STDOUT;
@@ -114,7 +114,7 @@ sub get_file_size {
 #------------------------------------------------
 
 sub find_duplicates {
-  FIND_DUP: for my $file_size ( keys %{ $file_processed->{size} } ) {
+  FIND_DUP: for my $file_size ( sort {$a <=> $b} keys %{ $file_processed->{size} } ) {
 
         my @files_with_same_size = @{ $file_processed->{size}{$file_size} };
 
@@ -122,8 +122,8 @@ sub find_duplicates {
 
         if ($opt{verbose}){
             printf $STDERR "processing hash: %s size : %s files: %d\n",
-                human_readable_size($file_size), 
                 $opt{hash}, 
+                human_readable_size($file_size), 
                 scalar @files_with_same_size;
         }
 
@@ -191,22 +191,23 @@ sub hash_file {
 
 sub human_readable_size {
     my $num = shift;
+    print $num,"\n";
     #return $num unless $num =~ /^\d+$/;
-    return sprintf("%d B" , round_size($num        )) if ($num < 1024**1);
-    return sprintf("%d kB", round_size($num/1024**1)) if ($num < 1024**2);
-    return sprintf("%d MB", round_size($num/1024**2)) if ($num < 1024**3);
-    return sprintf("%d GB", round_size($num/1024**3)) if ($num < 1024**4);
-    return sprintf("%d TB", round_size($num/1024**4)) if ($num < 1024**5);
-    return sprintf("%d PB", round_size($num/1024**5)) if ($num < 1024**6);
-    return sprintf("%d EB", round_size($num/1024**6)) if ($num < 1024**7);
-    return sprintf("%d ZB", round_size($num/1024**7)) if ($num < 1024**8);
-    return sprintf("%d EB", round_size($num/1024**8)) if ($num < 1024**9);
+    return sprintf("%s B" , round_size($num        )) if ($num < 1024**1);
+    return sprintf("%s KB", round_size($num/1024**1)) if ($num < 1024**2);
+    return sprintf("%s MB", round_size($num/1024**2)) if ($num < 1024**3);
+    return sprintf("%s GB", round_size($num/1024**3)) if ($num < 1024**4);
+    return sprintf("%s TB", round_size($num/1024**4)) if ($num < 1024**5);
+    return sprintf("%s PB", round_size($num/1024**5)) if ($num < 1024**6);
+    return sprintf("%s EB", round_size($num/1024**6)) if ($num < 1024**7);
+    return sprintf("%s ZB", round_size($num/1024**7)) if ($num < 1024**8);
+    return sprintf("%s EB", round_size($num/1024**8)) if ($num < 1024**9);
     return $num;
 }
 
 sub round_size {
     my $num = shift;
-    return sprintf("%d", $num+0.5);
+    return sprintf("%.2f", $num);
 }
 
 #------------------------------------------------
@@ -318,13 +319,13 @@ sub usage {
     print $STDERR <<EOTEXT;
 
 NAME
-ffdup $VERSION - Light duplicate file finder written in Perl
+ffdup $VERSION - Light duplicate file finder written in Perl.
 
 SYNOPSIS
 ffdup [OPTIONS] DIR
 
 DESCRIPTION
-Files with same size are compared by MD5 hash to detect duplicates.
+Files with same size are compared by hash to detect duplicates.
 
 OPTIONS
     --out = filename   Output file name (default stdout)
@@ -332,7 +333,7 @@ OPTIONS
     --print_size       Print file size into output
     --size_min = int   Don't compare files with size less than size_min
     --size_max = int   Don't compare files with size larger than size_max
-    --hash = string    Hash algorithm: SHA256, SHA1, MD5 (def)
+    --hash = string    Hash algorithm: SHA256 (strong), SHA1, MD5 (fast) def: MD5
     --verbose          Print debug messages
     --help             This help
 
