@@ -55,7 +55,7 @@ my %opt = (
     size_max    => undef,
     print_size  => undef,
     output      => undef,
-    hash        => 'SHA256',
+    hash        => 'MD5',
     verbose     => undef,
 );
 
@@ -173,6 +173,7 @@ sub hash_file {
     binmode(F);
     my $digest = 
         $opt{hash} eq 'MD5'     ? Digest::MD5->new->addfile(*F)         :
+        $opt{hash} eq 'SHA1'    ? Digest::SHA->new(256)->addfile(*F)    :
         $opt{hash} eq 'SHA256'  ? Digest::SHA->new(256)->addfile(*F)    :
         die sprintf "wrong hash algorithm '%s'\n", $opt{hash}||'';
     close(F);
@@ -326,10 +327,12 @@ DESCRIPTION
 Files with same size are compared by MD5 hash to detect duplicates.
 
 OPTIONS
-    --out              Output file name (default stdout)
-    --print_size       Print file size
-    --size_min         Don't compare files with size less than size_min
-    --size_max         Don't compare files with size larger than size_max
+    --out = filename   Output file name (default stdout)
+    --cwd              Current working directory as DIR
+    --print_size       Print file size into output
+    --size_min = int   Don't compare files with size less than size_min
+    --size_max = int   Don't compare files with size larger than size_max
+    --hash = string    Hash algorithm: SHA256, SHA1, MD5 (def)
     --verbose          Print debug messages
     --help             This help
 
@@ -361,6 +364,8 @@ GetOptions(
     'size_max=i',
     'print_size!',
     'out=s',
+    'cwd!',
+    'hash=s',
     'verbose!',
   )
   or usage;
@@ -373,14 +378,24 @@ $opt{dir}=$ARGV[0];
 
 # check params
 
+unless ($opt{hash} =~ /^(SHA256|SHA1|MD5)$/){
+    die "hash unhandled: '" . ($opt{hash} || '') . "'\n";
+}
+
 unless ( defined $opt{dir} ) {
-    print "missing mandatory DIR parameter\n";
-    usage();
+    if ($opt{cwd}){
+        $opt{dir} = cwd;
+    } else {
+        die "missing mandatory DIR argument or --cwd option\n";
+    }
+} else {
+    if ($opt{cwd}){
+        die "DIE argument and --cwd option are incompatible\n";
+    }
 }
 
 unless ( -d $opt{dir} ) {
-    print 'cannot open root dir : ' . $opt{dir} . "\n";
-    usage();
+    die 'cannot open root dir : ' . $opt{dir} . "\n";
 }
 
 init_out_streams;
