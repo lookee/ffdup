@@ -1,4 +1,4 @@
-#!/usr/bin/perl -W
+#!/usr/bin/perl -w
 
 my $VERSION = '0.0.2';
 
@@ -32,10 +32,10 @@ use strict;
 use warnings;
 use utf8;
 
-use Cwd;
+#use Cwd qw(cwd);
 use Data::Dumper;
 use Digest::MD5;
-use Digest::SHA;
+#use Digest::SHA;
 use File::Basename;
 use File::Find;
 #use File::Compare;
@@ -51,7 +51,7 @@ my $STDERR  = *STDERR;
 # Set defaults
 my %opt = (
     dir         => undef,
-    size_min    => undef,           
+    size_min    => 1024 ** 1,           
     size_max    => undef,
     print_size  => undef,
     output      => undef,
@@ -94,8 +94,8 @@ sub file_crawler {
             if 
                 !defined $file_size ||
                 $file_size == 0 ||
-                defined $opt{size_min} && $file_size <= $opt{size_min} ||
-                defined $opt{size_max} && $file_size >= $opt{size_max}
+                defined $opt{size_min} && $file_size < $opt{size_min} ||
+                defined $opt{size_max} && $file_size > $opt{size_max}
             ;
 
         push @{ $file_processed->{size}{$file_size} }, $file_name;
@@ -352,6 +352,40 @@ EOTEXT
     exit 2;
 }
 
+sub check_params {
+
+    # get the root dir
+    $opt{dir}=$ARGV[0];
+
+    unless ($opt{hash} =~ /^(SHA256|SHA1|MD5)$/){
+        die "hash unhandled: '" . ($opt{hash} || '') . "'\n";
+    }
+
+    # only if required
+    if ($opt{hash} =~ /^SHA/){
+        require Digest::SHA;
+    }
+
+    unless ( defined $opt{dir} ) {
+        if ($opt{cwd}){
+            require Cwd;
+            $opt{dir} = Cwd::cwd;
+        } else {
+            die "missing mandatory DIR argument or --cwd option\n";
+        }
+    } else {
+        if ($opt{cwd}){
+            die "DIE argument and --cwd option are incompatible\n";
+        }
+    }
+
+    unless ( -d $opt{dir} ) {
+        die 'cannot open root dir : ' . $opt{dir} . "\n";
+    }
+
+    return 1;
+}
+
 #------------------------------------------------
 # M A I N
 #------------------------------------------------
@@ -368,54 +402,35 @@ GetOptions(
     'hash=s',
     'verbose!',
   )
-  or usage;
+  or exit 1;
 
 # show usage
 usage if $opt{help};
 
-# get the root dir
-$opt{dir}=$ARGV[0];
+MAIN: {
 
-# check params
+    check_params;
 
-unless ($opt{hash} =~ /^(SHA256|SHA1|MD5)$/){
-    die "hash unhandled: '" . ($opt{hash} || '') . "'\n";
+    init_out_streams;
+
+    init_stat;
+
+    print $STDERR "crawlig directories\n" if ($opt{verbose});
+
+    dir_crawler( $opt{dir} );
+
+    print $STDERR "find duplicates\n" if ($opt{verbose});
+
+    find_duplicates;
+
+    print_duplicates;
+
+    stop_stat;
+
+    print_stat;
+
+    close_out_streams;
+
 }
-
-unless ( defined $opt{dir} ) {
-    if ($opt{cwd}){
-        $opt{dir} = cwd;
-    } else {
-        die "missing mandatory DIR argument or --cwd option\n";
-    }
-} else {
-    if ($opt{cwd}){
-        die "DIE argument and --cwd option are incompatible\n";
-    }
-}
-
-unless ( -d $opt{dir} ) {
-    die 'cannot open root dir : ' . $opt{dir} . "\n";
-}
-
-init_out_streams;
-
-init_stat;
-
-print $STDERR "crawlig directories\n" if ($opt{verbose});
-
-dir_crawler( $opt{dir} );
-
-print $STDERR "find duplicates\n" if ($opt{verbose});
-
-find_duplicates;
-
-print_duplicates;
-
-stop_stat;
-
-print_stat;
-
-close_out_streams;
 
 exit 0;
