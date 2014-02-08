@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ROOT_TEST_DIR='t/test_repos'
+ROOT_TEST_DIR='test_repos'
 BASE_TEST_DIR="${ROOT_TEST_DIR}/BASE"
 
 BLOCK_LIST="ABCDEFG"
