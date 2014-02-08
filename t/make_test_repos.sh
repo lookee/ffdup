@@ -2,9 +2,11 @@
 
 ROOT_TEST_DIR='test_repos'
 BASE_TEST_DIR="${ROOT_TEST_DIR}/BASE"
+REPOS_TEST_DIR="${ROOT_TEST_DIR}/TEST"
 
 BLOCK_LIST="ABCDEFG"
 MAX_FILE_COPY=7
+MAX_FILE_DUP_COPY=2
 
 BLOCKS=10
 BLOCK_SIZE='1K'
@@ -68,10 +70,18 @@ make_perm ${BLOCK_LIST:0:3}
 make_perm ${BLOCK_LIST:0:4}
 
 for i in {1..10}; do
-    new_dir="${ROOT_TEST_DIR}/D${i}"
+    new_dir="${REPOS_TEST_DIR}/D${i}"
     mkdir -p $new_dir
     file_copy_count=$(($RANDOM % $MAX_FILE_COPY))
     for src in $(find ${BASE_TEST_DIR} -type f | shuf -n "$file_copy_count"); do
         cp -v "$src" "$new_dir"
+    done
+done
+
+for i in {1..10}; do
+    new_dir="${REPOS_TEST_DIR}/D${i}"
+    file_copy_dup_count=$(($RANDOM % $MAX_FILE_DUP_COPY))
+    for src in $(find ${new_dir} -type f | shuf -n "$file_copy_dup_count"); do
+        cp -v "$src" "$src.dup"
     done
 done
