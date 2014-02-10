@@ -33,14 +33,14 @@ use warnings;
 use utf8;
 
 #use Cwd qw(cwd);
-use Data::Dumper;
-use Digest::MD5;
-#use Digest::SHA;
+use Data::Dumper;               
+use Digest::MD5;                # core v5.7.3
+#use Digest::SHA;               # core v5.9.3
 use File::Basename;
 use File::Find;
 #use File::Compare;
 use Getopt::Long;
-use Time::HiRes qw(time);
+use Time::HiRes qw(time);       # core v5.7.3
 
 # Global Variables
 
