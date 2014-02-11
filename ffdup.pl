@@ -7,7 +7,9 @@ my $VERSION = '0.0.2';
 # ffdup
 #
 # Light duplicate files finder witten in Perl
-# Luca Amore - luca.amore at gmail.com - <http://www.lucaamore.com>
+#
+# Copyright 2014, Luca Amore - luca.amore at gmail.com
+# <http://www.lucaamore.com>
 #
 # Git repository available at http://github.com/...
 #
@@ -51,7 +53,7 @@ my $STDERR  = *STDERR;
 # Set defaults
 my %opt = (
     dir         => undef,
-    size_min    => 1024 ** 1,           
+    size_min    => 1024 ** 1,   # 1KB           
     size_max    => undef,
     print_size  => undef,
     output      => undef,
