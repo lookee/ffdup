@@ -22,25 +22,41 @@
 VERSION="0.1" 
 
 ROOT_TEST_DIR='test_repos'
+
+# ---------------------------------------------------------------------------
+# TEST CONFIG PARAMETERS
+# ---------------------------------------------------------------------------
+TEST_DIRECTORY_COUNT=25 # number of test directory to create (ex D1, ..., DN)
+BLOCK_LIST="ABCDEFGH"   # every char is a block name
+MAX_FILE_COPY=7         # max file (random) copied from base
+MAX_FILE_DUP_COPY=2     # max file duplicated (.dup) in each dir
+BLOCK_SIZE='1K'         # block size
+MAX_BLOCKS_INTO_FILES=4 # number of max blocks into files
+# ---------------------------------------------------------------------------
+
+BLOCK_LIST_COUNT=${#BLOCK_LIST}
 BASE_TEST_DIR="${ROOT_TEST_DIR}/BASE"
 REPOS_TEST_DIR="${ROOT_TEST_DIR}/TEST"
 
-BLOCK_LIST="ABCDEFG"
-MAX_FILE_COPY=7
-MAX_FILE_DUP_COPY=2
-
-BLOCK_SIZE='1K'
-
-ASK_CONFIRM=0
+ASK_CONFIRM=1
 ASK_CONFIRM_TEXT="
-This program create a new TEST repository for ffdup.
-It create the root dir: ${ROOT_TEST_DIR}
+---------------------------------------------------------------
+FFDUP TEST REPOSITORY - ver. $VERSION
+---------------------------------------------------------------
 
-   TEST DIRECTORIES : ${TEST_DIRECTORY_COUNT}
-   BASE BLOCKS      : ${BLOCK_LIST}
-   BLOCK_SIZE       : ${BLOCK_SIZE}
-   MAX FILE COPY    : ${MAX_FILE_COPY}
-   MAX FILE DUP     : ${MAX_FILE_DUP}
+This program creates a new TEST random repository for ffdup.
+
+The root dir: ${ROOT_TEST_DIR}
+
+   N. TEST DIRECTORIES   : ${TEST_DIRECTORY_COUNT}
+   BASE BLOCKS           : ${BLOCK_LIST}
+   N. BASE BLOCKS        : ${BLOCK_LIST_COUNT}
+   BLOCK_SIZE            : ${BLOCK_SIZE}
+   MAX FILE COPY         : ${MAX_FILE_COPY}
+   MAX FILE DUP          : ${MAX_FILE_DUP_COPY}
+   MAX BLOCKS into FILES : ${MAX_BLOCKS_INTO_FILES}
+
+---------------------------------------------------------------
 
 Warning: All files into root dir will be removed.
 
@@ -92,19 +108,19 @@ mkdir -pv "${ROOT_TEST_DIR}"
 mkdir -pv "${BASE_TEST_DIR}"
 
 # generate random block files from BLOCK_LIST
-for (( i=0; i<${#BLOCK_LIST}; i++ )); do
+for (( i=0; i<${BLOCK_LIST_COUNT}; i++ )); do
     blk_name=${BLOCK_LIST:$i:1}
 	file_name="${BASE_TEST_DIR}/${blk_name}"
 	dd if=/dev/urandom of="$file_name" bs="$BLOCK_SIZE" count=1
 done
 
 # compose block files permutating blocks to generate multiblock files
-create_file_by_perm ${BLOCK_LIST:0:2}
-create_file_by_perm ${BLOCK_LIST:0:3}
-create_file_by_perm ${BLOCK_LIST:0:4}
+for i in $(seq 1 ${MAX_BLOCKS_INTO_FILES}); do
+    create_file_by_perm ${BLOCK_LIST:0:$i}
+done
 
 # random copy blocks or multiblock files into TEST directory tree
-for i in {1..10}; do
+for i in $(seq 1 ${TEST_DIRECTORY_COUNT}); do
     new_dir="${REPOS_TEST_DIR}/D${i}"
     mkdir -p $new_dir
     file_copy_count=$(($RANDOM % $MAX_FILE_COPY))
@@ -114,7 +130,7 @@ for i in {1..10}; do
 done
 
 # random duplicate files into TEST directory tree
-for i in {1..10}; do
+for i in $(seq 1 ${TEST_DIRECTORY_COUNT}); do
     new_dir="${REPOS_TEST_DIR}/D${i}"
     file_copy_dup_count=$(($RANDOM % $MAX_FILE_DUP_COPY))
     for src in $(find ${new_dir} -type f | shuf -n "$file_copy_dup_count"); do
