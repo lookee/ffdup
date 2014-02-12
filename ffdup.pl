@@ -193,7 +193,7 @@ sub hash_file {
 
 sub human_readable_size {
     my $num = shift;
-    #return $num unless $num =~ /^\d+$/;
+    return sprintf("%s B" , 0                       ) if (!defined $num);
     return sprintf("%s B" , round_size($num        )) if ($num < 1024**1);
     return sprintf("%s KB", round_size($num/1024**1)) if ($num < 1024**2);
     return sprintf("%s MB", round_size($num/1024**2)) if ($num < 1024**3);
