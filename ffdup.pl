@@ -40,6 +40,7 @@ use Digest::MD5;                # core v5.7.3
 #use Digest::SHA;               # core v5.9.3
 use File::Basename;
 use File::Find;
+use File::Spec qw(rel2abs);
 #use File::Compare;
 use Getopt::Long;
 use Time::HiRes qw(time);       # core v5.7.3
@@ -78,6 +79,7 @@ my $file_processed = {
 # processing files through directory trees
 sub dir_crawler {
     my $dir = shift;
+    $dir = File::Spec->rel2abs($dir);
     find( { wanted => \&file_crawler, follow => 0 }, $dir );
 }
 
@@ -85,14 +87,15 @@ sub dir_crawler {
 sub file_crawler {
     my $file_name = $File::Find::name;
 
-  ADD_FILES: {
-        last ADD_FILES unless -f $file_name;
+    ADD_FILE: {
+
+        last ADD_FILE unless -f $file_name;
 
         $file_processed->{stat}{file_processed}++;
 
         my $file_size = get_file_size($file_name);
 
-        last ADD_FILES 
+        last ADD_FILE 
             if 
                 !defined $file_size ||
                 $file_size == 0 ||
@@ -104,7 +107,8 @@ sub file_crawler {
         
         $file_processed->{stat}{file_added}++;
         $file_processed->{stat}{file_size_added} += $file_size;
-    }
+
+    } # end: ADD_FILE
 }
 
 sub get_file_size {
