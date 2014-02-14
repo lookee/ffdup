@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-my $VERSION = '0.0.3';
+my $VERSION = '0.0.4';
 
 ############################################################################
 #
@@ -73,7 +73,7 @@ my $file_processed = {
 };
 
 #------------------------------------------------
-# D I R  C R A W L E R
+# D I R  A N D  F I L E  C R A W L E R
 #------------------------------------------------
 
 # processing files through directory trees
@@ -265,6 +265,10 @@ sub print_duplicates {
     }    
 }
 
+#------------------------------------------------
+# S T A T 
+#------------------------------------------------
+
 sub init_stat {
     $file_processed->{stat}{time_start} = time;
     for (qw(    file_processed 
@@ -323,6 +327,9 @@ sub print_stat {
     printf $STDERR "\n";
 }
 
+#------------------------------------------------
+# U S A G E 
+#------------------------------------------------
 sub usage {
     my $msg = shift;
     
@@ -367,6 +374,9 @@ EOTEXT
     exit 2;
 }
 
+#------------------------------------------------
+# O P T S 
+#------------------------------------------------
 sub check_init_params {
 
     # get the root dir
