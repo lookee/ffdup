@@ -1,12 +1,12 @@
 #!/usr/bin/perl -w
 
-my $VERSION = '0.0.2';
+my $VERSION = '0.0.3';
 
 ############################################################################
 #
 # ffdup
 #
-# Light duplicate files finder witten in Perl
+# Duplicate file finder witten in Perl
 #
 # Copyright 2014, Luca Amore - luca.amore at gmail.com
 # <http://www.lucaamore.com>
@@ -53,7 +53,6 @@ my $STDERR  = *STDERR;
 
 # Set defaults
 my %opt = (
-    dir         => undef,
     size_min    => 1024 ** 1,   # 1KB           
     size_max    => undef,
     print_size  => undef,
@@ -63,6 +62,7 @@ my %opt = (
 );
 
 # global variables
+my @DIRS;
 my $cmd = basename($0);
 
 # processed file buffer
@@ -85,15 +85,22 @@ sub dir_crawler {
 
 # processing file
 sub file_crawler {
-    my $file_name = $File::Find::name;
+    my $full_abs_path_file_name = $File::Find::name;
 
     ADD_FILE: {
 
-        last ADD_FILE unless -f $file_name;
+        last ADD_FILE unless -f $full_abs_path_file_name;
+
+        last ADD_FILE
+            if $opt{store_all_processed_full_abs_path_file_name} &&
+            defined $file_processed->{name}{$full_abs_path_file_name};
 
         $file_processed->{stat}{file_processed}++;
 
-        my $file_size = get_file_size($file_name);
+        my $file_size = get_file_size($full_abs_path_file_name);
+
+        $file_processed->{name}{$full_abs_path_file_name} = $file_size
+            if $opt{store_all_processed_full_abs_path_file_name};
 
         last ADD_FILE 
             if 
@@ -103,7 +110,7 @@ sub file_crawler {
                 defined $opt{size_max} && $file_size > $opt{size_max}
             ;
 
-        push @{ $file_processed->{size}{$file_size} }, $file_name;
+        push @{ $file_processed->{size}{$file_size} }, $full_abs_path_file_name;
         
         $file_processed->{stat}{file_added}++;
         $file_processed->{stat}{file_size_added} += $file_size;
@@ -120,7 +127,7 @@ sub get_file_size {
 #------------------------------------------------
 
 sub find_duplicates {
-  FIND_DUP: for my $file_size ( sort {$a <=> $b} keys %{ $file_processed->{size} } ) {
+  FIND_DUP: for my $file_size ( sort {$b <=> $a} keys %{ $file_processed->{size} } ) {
 
         my @files_with_same_size = @{ $file_processed->{size}{$file_size} };
 
@@ -324,22 +331,24 @@ sub usage {
     print $STDERR <<EOTEXT;
 
 NAME
-ffdup $VERSION - Light duplicate file finder written in Perl.
+ffdup $VERSION - Duplicate file finder written in Perl.
 
 SYNOPSIS
-ffdup [OPTIONS] DIR
+ffdup [OPTIONS] [DIR 1] ... [DIR n ]
 
 DESCRIPTION
 Files with same size are compared by hash to detect duplicates.
 
 OPTIONS
     --out = filename   Output file name (default stdout)
-    --cwd              Current working directory as DIR
+    --cwd              Add current working directory as DIR
+    --home             Add user home directory as DIR
     --print_size       Print file size into output
     --size_min = int   Don't compare files with size less than size_min
     --size_max = int   Don't compare files with size larger than size_max
     --hash = string    Hash algorithm: SHA256 (strong), SHA1, MD5 (fast) def: MD5
     --verbose          Print debug messages
+    --version          Print ffdup version
     --help             This help
 
 AUTHOR
@@ -358,10 +367,15 @@ EOTEXT
     exit 2;
 }
 
-sub check_params {
+sub check_init_params {
 
     # get the root dir
-    $opt{dir}=$ARGV[0];
+    @DIRS = @ARGV;
+
+    if ($opt{version}){
+        printf "ffdup version: %s\n", $VERSION;
+        exit 2;
+    }
 
     unless ($opt{hash} =~ /^(SHA256|SHA1|MD5)$/){
         die "hash unhandled: '" . ($opt{hash} || '') . "'\n";
@@ -371,22 +385,27 @@ sub check_params {
     if ($opt{hash} =~ /^SHA/){
         require Digest::SHA;
     }
-
-    unless ( defined $opt{dir} ) {
-        if ($opt{cwd}){
-            require Cwd;
-            $opt{dir} = Cwd::cwd;
-        } else {
-            die "missing mandatory DIR argument or --cwd option\n";
-        }
-    } else {
-        if ($opt{cwd}){
-            die "DIE argument and --cwd option are incompatible\n";
-        }
+ 
+    if ($opt{cwd}){
+        require Cwd;
+        push @DIRS, Cwd::cwd;
     }
 
-    unless ( -d $opt{dir} ) {
-        die 'cannot open root dir : ' . $opt{dir} . "\n";
+    if ($opt{home}){
+        push @DIRS, $ENV{HOME};
+    }
+
+    unless (scalar @DIRS) {
+            die "missing DIR to crawl\n";
+    }
+
+    $opt{store_all_processed_full_abs_path_file_name} = scalar @DIRS > 1;
+
+    # check dirs    
+    for (@DIRS){
+        unless ( -d $_ ) {
+            die "cannot open root dir : $_\n";
+        }
     }
 
     return 1;
@@ -404,9 +423,11 @@ GetOptions(
     'size_max=i',
     'print_size!',
     'out=s',
-    'cwd!',
+    'cwd',
+    'home',
     'hash=s',
-    'verbose!',
+    'verbose',
+    'version',
   )
   or exit 1;
 
@@ -415,7 +436,7 @@ usage if $opt{help};
 
 MAIN: {
 
-    check_params;
+    check_init_params;
 
     init_out_streams;
 
@@ -423,7 +444,7 @@ MAIN: {
 
     print $STDERR "crawlig directories\n" if ($opt{verbose});
 
-    dir_crawler( $opt{dir} );
+    dir_crawler( $_ ) for @DIRS;
 
     print $STDERR "find duplicates\n" if ($opt{verbose});
 
