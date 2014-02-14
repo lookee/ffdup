@@ -19,7 +19,7 @@
 #
 # ---------------------------------------------------------------------------
 
-VERSION="0.1" 
+VERSION="0.1"
 
 ROOT_TEST_DIR='test_repos'
 
@@ -48,13 +48,13 @@ This program creates a new TEST random repository for ffdup.
 
 The root dir: ${ROOT_TEST_DIR}
 
-   N. TEST DIRECTORIES   : ${TEST_DIRECTORY_COUNT}
-   BASE BLOCKS           : ${BLOCK_LIST}
-   N. BASE BLOCKS        : ${BLOCK_LIST_COUNT}
-   BLOCK_SIZE            : ${BLOCK_SIZE}
-   MAX FILE COPY         : ${MAX_FILE_COPY}
-   MAX FILE DUP          : ${MAX_FILE_DUP_COPY}
-   MAX BLOCKS into FILES : ${MAX_BLOCKS_INTO_FILES}
+N. TEST DIRECTORIES   : ${TEST_DIRECTORY_COUNT}
+BASE BLOCKS           : ${BLOCK_LIST}
+N. BASE BLOCKS        : ${BLOCK_LIST_COUNT}
+BLOCK_SIZE            : ${BLOCK_SIZE}
+MAX FILE COPY         : ${MAX_FILE_COPY}
+MAX FILE DUP          : ${MAX_FILE_DUP_COPY}
+MAX BLOCKS into FILES : ${MAX_BLOCKS_INTO_FILES}
 
 ---------------------------------------------------------------
 
@@ -68,7 +68,7 @@ perm() {
 	local items="$1"
 	local out="$2"
 	local i
-	[[ "$items" == "" ]] && echo $out && return 
+	[[ "$items" == "" ]] && echo $out && return
 	for (( i=0; i<${#items}; i++ )) ; do
 		perm "${items:0:i}${items:i+1}" "$out${items:i:1}"
 	done
@@ -78,7 +78,7 @@ perm() {
 create_file_by_perm() {
     local blocks="$1"
     local base_dir="${BASE_TEST_DIR}"
- 
+
     for f in $(perm "$blocks"); do
         dest_file="${base_dir}/${f}"
         for (( i=0; i<${#f}; i++ )); do
@@ -104,7 +104,7 @@ fi
 rm -rfv "${ROOT_TEST_DIR}"
 
 # generate TEST repository directory tree
-mkdir -pv "${ROOT_TEST_DIR}" 
+mkdir -pv "${ROOT_TEST_DIR}"
 mkdir -pv "${BASE_TEST_DIR}"
 
 # generate random block files from BLOCK_LIST

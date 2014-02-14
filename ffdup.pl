@@ -305,7 +305,7 @@ sub stop_stat {
 
 sub print_stat {
     my $stat = $file_processed->{stat};
-    printf $STDERR "\nSTATS:\n";
+    printf $STDERR "\nFFDUP STATS:\n";
     printf $STDERR "   duplicated files      : %d\n", $stat->{file_duplicated};
     printf $STDERR "   duplicated files size : %s\n", human_readable_size($stat->{file_size_duplicated});
     printf $STDERR "   processed files       : %d\n", $stat->{file_processed};
@@ -334,7 +334,7 @@ NAME
 ffdup $VERSION - Duplicate file finder written in Perl.
 
 SYNOPSIS
-ffdup [OPTIONS] [DIR 1] ... [DIR n ]
+ffdup [OPTIONS] [DIR 1] ... [DIR n]
 
 DESCRIPTION
 Files with same size are compared by hash to detect duplicates.
