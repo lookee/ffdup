@@ -65,11 +65,12 @@ my %opt = (
 my @DIRS;
 my $cmd = basename($0);
 
-# processed file buffer
+# processed file
 my $file_processed = {
-    size => {},
-    dup  => {},
-    stat => {},
+    name => {},         # processed files by name
+    size => {},         # processed files clustered by size
+    dup  => {},         # dup detected by name
+    stat => {},         # processing stat
 };
 
 #------------------------------------------------
@@ -78,8 +79,7 @@ my $file_processed = {
 
 # processing files through directory trees
 sub dir_crawler {
-    my $dir = shift;
-    $dir = File::Spec->rel2abs($dir);
+    my $dir = File::Spec->rel2abs(shift);
     find( { wanted => \&file_crawler, follow => 0 }, $dir );
 }
 
@@ -99,13 +99,15 @@ sub file_crawler {
 
         my $file_size = get_file_size($full_abs_path_file_name);
 
+        last ADD_FILE 
+            unless defined $file_size || 
+                $file_size == 0;
+
         $file_processed->{name}{$full_abs_path_file_name} = $file_size
             if $opt{store_all_processed_full_abs_path_file_name};
 
         last ADD_FILE 
             if 
-                !defined $file_size ||
-                $file_size == 0 ||
                 defined $opt{size_min} && $file_size < $opt{size_min} ||
                 defined $opt{size_max} && $file_size > $opt{size_max}
             ;
@@ -142,7 +144,7 @@ sub find_duplicates {
 
         # calculate hash only for file with the same size
         for my $file_name (@files_with_same_size) {
-            my $hash = hash_file($file_name,$file_size);
+            my $hash = hash_file($file_name, $file_size);
             next FIND_DUP unless defined $hash;
             push @{ $file_processed->{dup}{$file_size}{$hash} }, $file_name;
             $file_processed->{stat}{file_hash_calculated}++;
@@ -218,8 +220,7 @@ sub human_readable_size {
 }
 
 sub round_size {
-    my $num = shift;
-    return sprintf("%.2f", $num);
+    return sprintf("%.2f", shift);
 }
 
 #------------------------------------------------
