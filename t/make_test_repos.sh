@@ -30,6 +30,7 @@ TEST_DIRECTORY_COUNT=25 # number of test directory to create (ex D1, ..., DN)
 BLOCK_LIST="ABCDEFGH"   # every char is a block name
 MAX_FILE_COPY=7         # max file (random) copied from base
 MAX_FILE_DUP_COPY=2     # max file duplicated (.dup) in each dir
+SYMLINK_DIR_COUNT=3     # number of symlink directories
 BLOCK_SIZE='1K'         # block size
 MAX_BLOCKS_INTO_FILES=4 # number of max blocks into files
 # ---------------------------------------------------------------------------
@@ -48,13 +49,14 @@ This program creates a new TEST random repository for ffdup.
 
 The root dir: ${ROOT_TEST_DIR}
 
-N. TEST DIRECTORIES   : ${TEST_DIRECTORY_COUNT}
-BASE BLOCKS           : ${BLOCK_LIST}
-N. BASE BLOCKS        : ${BLOCK_LIST_COUNT}
-BLOCK_SIZE            : ${BLOCK_SIZE}
-MAX FILE COPY         : ${MAX_FILE_COPY}
-MAX FILE DUP          : ${MAX_FILE_DUP_COPY}
-MAX BLOCKS into FILES : ${MAX_BLOCKS_INTO_FILES}
+N. TEST DIRECTORIES    : ${TEST_DIRECTORY_COUNT}
+BASE BLOCKS            : ${BLOCK_LIST}
+N. BASE BLOCKS         : ${BLOCK_LIST_COUNT}
+BLOCK_SIZE             : ${BLOCK_SIZE}
+MAX FILE COPY          : ${MAX_FILE_COPY}
+MAX FILE DUP           : ${MAX_FILE_DUP_COPY}
+MAX BLOCKS into FILES  : ${MAX_BLOCKS_INTO_FILES}
+N. SYMLINK DIRECTORIES : ${SYMLINK_DIR_COUNT}
 
 ---------------------------------------------------------------
 
@@ -136,4 +138,11 @@ for i in $(seq 1 ${TEST_DIRECTORY_COUNT}); do
     for src in $(find ${new_dir} -type f | shuf -n "$file_copy_dup_count"); do
         cp -v "$src" "$src.dup"
     done
+done
+
+# create symlink directories
+for i in $(seq 1 ${SYMLINK_DIR_COUNT}); do
+    cd ${REPOS_TEST_DIR}
+    ln -sv "D${i}" "SD${i}"
+    cd -
 done

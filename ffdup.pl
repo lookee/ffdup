@@ -53,12 +53,15 @@ my $STDERR  = *STDERR;
 
 # Set defaults
 my %opt = (
-    size_min    => 1024 ** 1,   # 1KB           
-    size_max    => undef,
-    print_size  => undef,
-    output      => undef,
-    hash        => 'MD5',
-    verbose     => undef,
+    size_min        => 1024 ** 1,   # 1KB           
+    size_max        => undef,
+    print_size      => undef,
+    output          => undef,
+    hash            => 'MD5',
+    follow_symlink  => 0,
+    quiet           => undef,
+    progress        => 1,
+    verbose         => undef,
 );
 
 # global variables
@@ -80,7 +83,9 @@ my $file_processed = {
 # processing files through directory trees
 sub dir_crawler {
     my $dir = File::Spec->rel2abs(shift);
-    find( { wanted => \&file_crawler, follow => 0 }, $dir );
+    msg_section("crawling dir start: $dir");
+    find( { wanted => \&file_crawler, follow => $opt{follow_symlink} }, $dir );
+    msg_section("crawling dir end: $dir");
 }
 
 # processing file
@@ -88,6 +93,8 @@ sub file_crawler {
     my $full_abs_path_file_name = $File::Find::name;
 
     ADD_FILE: {
+
+        msg_verbose_ln($full_abs_path_file_name);
 
         last ADD_FILE unless -f $full_abs_path_file_name;
 
@@ -117,11 +124,13 @@ sub file_crawler {
         $file_processed->{stat}{file_added}++;
         $file_processed->{stat}{file_size_added} += $file_size;
 
+        msg_verbose_ln($full_abs_path_file_name . ' : processed' );
+
     } # end: ADD_FILE
 }
 
 sub get_file_size {
-    return ( stat($_) )[7];
+    return ( stat(shift) )[7];
 }
 
 #------------------------------------------------
@@ -135,30 +144,40 @@ sub find_duplicates {
 
         next FIND_DUP if scalar @files_with_same_size < 2;
 
-        if ($opt{verbose}){
-            printf $STDERR "processing hash: %s size : %s files: %d\n",
+        my $file_size_human = human_readable_size($file_size);
+
+        msg_section(
+            sprintf "processing hash: %s size : %s files: %d",
                 $opt{hash}, 
-                human_readable_size($file_size), 
-                scalar @files_with_same_size;
-        }
+                $file_size_human, 
+                scalar @files_with_same_size
+        );
 
         # calculate hash only for file with the same size
         for my $file_name (@files_with_same_size) {
+            msg_verbose_ln(
+                sprintf(
+                    "%s : %s [%s]",
+                    $opt{hash},
+                    $file_name,
+                    $file_size_human
+                )
+            );
             my $hash = hash_file($file_name, $file_size);
             next FIND_DUP unless defined $hash;
             push @{ $file_processed->{dup}{$file_size}{$hash} }, $file_name;
             $file_processed->{stat}{file_hash_calculated}++;
             $file_processed->{stat}{file_hash_size_calculated}+= $file_size;
-            print $STDERR '*' if ($opt{verbose});
+            msg_progress('*');
         }
 
-        print $STDERR "\n" if ($opt{verbose});
+        msg_progress_ln ("");
 
-        # remove unique hashes (no duplicates)
+        # remove unique hashes (no duplicate)
         for my $hash ( keys %{ $file_processed->{dup}{$file_size} } ) {
             my $hash_multiplicity = 
                 scalar @{ $file_processed->{dup}{$file_size}{$hash} };
-            if ( $hash_multiplicity < 2 ) {
+            if ( $hash_multiplicity == 1 ) {
                 delete $file_processed->{dup}{$file_size}{$hash};
             } else {
                 $file_processed->{stat}{file_duplicated} += 
@@ -181,7 +200,7 @@ sub hash_file {
     my $hash_start_time = time;
 
     unless ( open( F, $file ) ) {
-        print $STDERR "Can't open '$file' for reading: $!\n";
+        print $STDERR "ERROR: Can't open '$file' for reading: $!\n";
         return undef;
     }
 
@@ -224,6 +243,38 @@ sub round_size {
 }
 
 #------------------------------------------------
+# M S G  O U T P U T
+#------------------------------------------------
+
+sub msg_section {
+    msg_out_ln($_[0]) if $opt{verbose} || $opt{progress};
+}
+
+sub msg_verbose {
+    msg_out($_[0]) if $opt{verbose};
+}
+
+sub msg_progress {
+    msg_out($_[0]) if $opt{progress};
+}
+
+sub msg_verbose_ln {
+    msg_out_ln($_[0]) if $opt{verbose};
+}
+
+sub msg_progress_ln {
+    msg_out_ln($_[0]) if $opt{progress};
+}
+
+sub msg_out {
+    print $STDERR $_[0];
+}
+
+sub msg_out_ln {
+    print $STDERR $_[0], "\n";
+}
+
+#------------------------------------------------
 # O U T P U T
 #------------------------------------------------
 
@@ -234,7 +285,6 @@ sub init_out_streams {
     if (defined $outfile){
         open($STDOUT, ">", $outfile) 
             or die "cannot open > $outfile: $!";
-    } else {
     }
 }
 
@@ -309,6 +359,7 @@ sub stop_stat {
 }
 
 sub print_stat {
+    return if $opt{quiet};
     my $stat = $file_processed->{stat};
     printf $STDERR "\nFFDUP STATS:\n";
     printf $STDERR "   duplicated files      : %d\n", $stat->{file_duplicated};
@@ -342,25 +393,27 @@ NAME
 ffdup $VERSION - Duplicate file finder written in Perl.
 
 SYNOPSIS
-ffdup [OPTIONS] [DIR 1] ... [DIR n]
+ffdup [OPTIONS] [DIR 1] ... [DIR N]
 
 DESCRIPTION
 Files with same size are compared by hash to detect duplicates.
 
 OPTIONS
-    --out = filename   Output file name (default stdout)
-    --cwd              Add current working directory as DIR
-    --home             Add user home directory as DIR
-    --print_size       Print file size into output
-    --size_min = int   Don't compare files with size less than size_min
-    --size_max = int   Don't compare files with size larger than size_max
-    --hash = string    Hash algorithm: SHA256 (strong), SHA1, MD5 (fast) def: MD5
-    --verbose          Print debug messages
-    --version          Print ffdup version
-    --help             This help
+    --out = FILE         Output file name (default stdout)
+    --cwd                Add current working directory as DIR
+    --home               Add user home directory as DIR
+    --print_size         Print file size into output
+    --size_min = NUMBER  Don't compare files with size less than size_min
+    --size_max = NUMBER  Don't compare files with size larger than size_max
+    --hash = HASH        Hash algorithm: SHA256 (strong), SHA1, MD5 (fast) def: MD5
+    --progress           Print progress messages
+    --verbose            Print debug messages
+    --quiet              Don't print verbose or debug messages
+    --version            Print ffdup version
+    --help               This help
 
 AUTHOR
-Written by Luca Amore (lookee).
+Written by Luca Amore.
 For the latest updates, please visit <http://www.lucaamore.com>
 Git repository available at <http://github.com/...>
 
@@ -410,6 +463,14 @@ sub check_init_params {
             die "missing DIR to crawl\n";
     }
 
+    if ($opt{verbose}){
+        $opt{progress}=0;
+    }
+
+    if ($opt{quiet}){
+        $opt{progress}=$opt{verbose}=0;
+    }
+
     $opt{store_all_processed_full_abs_path_file_name} = scalar @DIRS > 1;
 
     # check dirs    
@@ -429,15 +490,17 @@ sub check_init_params {
 # Gather the options from the command line
 GetOptions(
     \%opt,
-    'help!',
+    'help',
     'size_min=i',
     'size_max=i',
-    'print_size!',
+    'print_size',
     'out=s',
     'cwd',
     'home',
     'hash=s',
     'verbose',
+    'progress',
+    'quiet',
     'version',
   )
   or exit 1;
@@ -453,11 +516,11 @@ MAIN: {
 
     init_stat;
 
-    print $STDERR "crawlig directories\n" if ($opt{verbose});
+    msg_section("CRAWLING DIRECTORIES");
 
     dir_crawler( $_ ) for @DIRS;
 
-    print $STDERR "find duplicates\n" if ($opt{verbose});
+    msg_section("FIND DUPLICATES");
 
     find_duplicates;
 
