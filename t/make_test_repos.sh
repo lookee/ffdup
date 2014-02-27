@@ -31,7 +31,7 @@ BLOCK_LIST="ABCDEFGH"   # every char is a block name
 MAX_FILE_COPY=7         # max file (random) copied from base
 MAX_FILE_DUP_COPY=2     # max file duplicated (.dup) in each dir
 SYMLINK_DIR_COUNT=3     # number of symlink directories
-BLOCK_SIZE='1K'         # block size
+BLOCK_SIZE='8K'         # block size
 MAX_BLOCKS_INTO_FILES=4 # number of max blocks into files
 # ---------------------------------------------------------------------------
 

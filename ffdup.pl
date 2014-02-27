@@ -102,31 +102,44 @@ sub file_crawler {
 
         msg_verbose_ln($full_abs_path_file_name);
 
+        # process only files
         last ADD_FILE unless -f $full_abs_path_file_name;
 
-        last ADD_FILE
-            if $opt{store_all_processed_full_abs_path_file_name} &&
-            defined $file_processed->{name}{$full_abs_path_file_name};
+        # process only readable files
+        last ADD_FILE unless -r $full_abs_path_file_name;
+
+        # don't process more time the same file
+        if ($opt{store_all_processed_full_abs_path_file_name}){
+
+            last ADD_FILE 
+                if defined $file_processed->{name}{$full_abs_path_file_name};
+        }
 
         $file_processed->{stat}{file_processed}++;
 
         my $file_size = get_file_size($full_abs_path_file_name);
 
+        # don't process zero size file
         last ADD_FILE 
             unless defined $file_size || 
                 $file_size == 0;
 
-        $file_processed->{name}{$full_abs_path_file_name} = $file_size
-            if $opt{store_all_processed_full_abs_path_file_name};
-
+        # don't process files with size over the min/max window size
         last ADD_FILE 
             if 
                 defined $opt{size_min} && $file_size < $opt{size_min} ||
                 defined $opt{size_max} && $file_size > $opt{size_max}
             ;
 
+
+        # store the filename with absolutepath with filename as key
+        $file_processed->{name}{$full_abs_path_file_name} = $file_size
+            if ($opt{store_all_processed_full_abs_path_file_name});
+
+        # store the filename with absolute path clustered by size as key
         push @{ $file_processed->{size}{$file_size} }, $full_abs_path_file_name;
         
+        # update stats
         $file_processed->{stat}{file_added}++;
         $file_processed->{stat}{file_size_added} += $file_size;
 
