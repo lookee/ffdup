@@ -61,8 +61,8 @@ my %opt = (
     hash            => 'MD5',
     follow_symlink  => 0,
     quiet           => undef,
-    progress        => 1,
-    verbose         => undef,
+    progress        => 0,
+    verbose         => 1,
     fast_scan       => 1,               # enable crc check before hash
     fast_scan_blk   => 1 * 1024 ** 1,   # 1KB
     fast_scan_head  => 1,
@@ -150,22 +150,6 @@ sub find_duplicates {
 
         my @files_with_same_size = @{ $file_processed->{size}{$file_size} };
 
-        my $fast_hash = {};
-        for my $file_name (@files_with_same_size) {
-            msg_verbose_ln(
-                sprintf(
-                    "%s : %s [%s]",
-                    'CRC',
-                    $file_name,
-                    $file_size_human
-                )
-            );
-            my $hash = fast_hash_file($file_name, $file_size);
-            push @{ $fast_hash->{$hash} }, $file_name;
-        }
-
-        # filter filter with same size
-
         next FIND_DUP if scalar @files_with_same_size < 2;
 
         msg_section(
@@ -174,6 +158,32 @@ sub find_duplicates {
                 $file_size_human, 
                 scalar @files_with_same_size
         );
+
+        if ($opt{fast_scan}){
+
+            my $fast_hash = {};
+            for my $file_name (@files_with_same_size) {
+                msg_verbose_ln(
+                    sprintf(
+                        "%s : %s [%s]",
+                        'CRC',
+                        $file_name,
+                        $file_size_human
+                    )
+                );
+                my $hash = fast_hash_file($file_name, $file_size);
+                push @{ $fast_hash->{$hash} }, $file_name;
+                $file_processed->{stat}{file_fast_hash_calculated}++;
+            }
+
+            # only files with same crc
+            @files_with_same_size = 
+                map { @{$fast_hash->{$_}} }
+                    grep { scalar @{$fast_hash->{$_}} >1 } 
+                        keys %{$fast_hash}
+                ;
+
+        } # end: fast_scan
 
         # calculate hash only for file with the same size
         for my $file_name (@files_with_same_size) {
@@ -393,6 +403,7 @@ sub init_stat {
                 file_added 
                 file_size_added 
                 file_hash_calculated
+                file_fast_hash_calculated
                 file_hash_size_calculated 
                 file_duplicated
                 file_size_duplicated
@@ -437,6 +448,8 @@ sub print_stat {
     printf $STDERR "   execution time        : %.3f ms\n", $file_processed->{stat}{time_execution};
     printf $STDERR "   throughput            : %s\\s\n", human_readable_size($file_processed->{stat}{troughput_all})
         if defined $file_processed->{stat}{troughput_all};
+    printf $STDERR "   hash fast calulated   : %d\n", $stat->{file_fast_hash_calculated};
+    printf $STDERR "   hash fast filtered    : %d\n", $stat->{file_fast_hash_calculated} - $stat->{file_hash_calculated} ;
     printf $STDERR "   hash calulated        : %d\n", $stat->{file_hash_calculated};
     printf $STDERR "   hash calculated size  : %s\n", human_readable_size($stat->{file_hash_size_calculated});
     printf $STDERR "   hash time             : %.3f ms\n", $file_processed->{stat}{time_hash};
