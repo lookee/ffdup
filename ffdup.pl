@@ -271,6 +271,8 @@ sub fast_hash_file {
 
     my $fh;
 
+    my $hash_start_time = time;
+
     my $block_size = $opt{fast_scan_blk}; 
 
     return '0' if $file_size < $block_size * 2;
@@ -307,6 +309,9 @@ sub fast_hash_file {
     close($fh);
 
     my $crc = join('-', @crc);
+
+
+    $file_processed->{stat}{time_fast_hash} += time - $hash_start_time;
 
     return $crc;
 }
@@ -423,6 +428,7 @@ sub init_stat {
                 file_duplicated
                 file_size_duplicated
                 time_hash
+                time_fast_hash
         )){
         $file_processed->{stat}{$_} = 0;
     }
@@ -461,13 +467,14 @@ sub print_stat {
     printf $STDERR "   analyzed files        : %d\n", $stat->{file_added};
     printf $STDERR "   analyzed files size   : %s\n", human_readable_size($stat->{file_size_added});
     printf $STDERR "   execution time        : %.3f ms\n", $file_processed->{stat}{time_execution};
+    printf $STDERR "   hash time             : %.3f ms\n", $file_processed->{stat}{time_hash};
+    printf $STDERR "   hash fast time        : %.3f ms\n", $file_processed->{stat}{time_fast_hash};
     printf $STDERR "   throughput            : %s\\s\n", human_readable_size($file_processed->{stat}{troughput_all})
         if defined $file_processed->{stat}{troughput_all};
     printf $STDERR "   hash fast calulated   : %d\n", $stat->{file_fast_hash_calculated};
     printf $STDERR "   hash fast filtered    : %d\n", $stat->{file_fast_hash_calculated} - $stat->{file_hash_calculated} ;
     printf $STDERR "   hash calulated        : %d\n", $stat->{file_hash_calculated};
     printf $STDERR "   hash calculated size  : %s\n", human_readable_size($stat->{file_hash_size_calculated});
-    printf $STDERR "   hash time             : %.3f ms\n", $file_processed->{stat}{time_hash};
     printf $STDERR "   hash throughput       : %s\\s\n", human_readable_size($file_processed->{stat}{troughput_hash})
         if defined $file_processed->{stat}{troughput_all};
     printf $STDERR "   hash algorithm        : %s\n", $opt{hash};
