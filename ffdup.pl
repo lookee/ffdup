@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-my $VERSION = '0.0.4';
+my $VERSION = '0.0.5';
 
 ############################################################################
 #
@@ -44,6 +44,7 @@ use File::Spec qw(rel2abs);
 #use File::Compare;
 use Getopt::Long;
 use Time::HiRes qw(time);       # core v5.7.3
+use Fcntl qw(SEEK_SET SEEK_CUR SEEK_END);
 
 # Global Variables
 
@@ -53,7 +54,7 @@ my $STDERR  = *STDERR;
 
 # Set defaults
 my %opt = (
-    size_min        => 1024 ** 1,   # 1KB           
+    size_min        => 1024 ** 1,       # 1KB           
     size_max        => undef,
     print_size      => undef,
     output          => undef,
@@ -62,6 +63,11 @@ my %opt = (
     quiet           => undef,
     progress        => 1,
     verbose         => undef,
+    fast_scan       => 1,               # enable crc check before hash
+    fast_scan_blk   => 1 * 1024 ** 1,   # 1KB
+    fast_scan_head  => 1,
+    fast_scan_mid   => 1,
+    fast_scan_tail  => 1,
 );
 
 # global variables
@@ -140,11 +146,27 @@ sub get_file_size {
 sub find_duplicates {
   FIND_DUP: for my $file_size ( sort {$b <=> $a} keys %{ $file_processed->{size} } ) {
 
+        my $file_size_human = human_readable_size($file_size);
+
         my @files_with_same_size = @{ $file_processed->{size}{$file_size} };
 
-        next FIND_DUP if scalar @files_with_same_size < 2;
+        my $fast_hash = {};
+        for my $file_name (@files_with_same_size) {
+            msg_verbose_ln(
+                sprintf(
+                    "%s : %s [%s]",
+                    'CRC',
+                    $file_name,
+                    $file_size_human
+                )
+            );
+            my $hash = fast_hash_file($file_name, $file_size);
+            push @{ $fast_hash->{$hash} }, $file_name;
+        }
 
-        my $file_size_human = human_readable_size($file_size);
+        # filter filter with same size
+
+        next FIND_DUP if scalar @files_with_same_size < 2;
 
         msg_section(
             sprintf "processing hash: %s size : %s files: %d",
@@ -199,9 +221,9 @@ sub hash_file {
 
     my $hash_start_time = time;
 
-    unless ( open( F, $file ) ) {
+    unless ( open( F, '<', $file ) ) {
         print $STDERR "ERROR: Can't open '$file' for reading: $!\n";
-        return undef;
+        return;
     }
 
     binmode(F);
@@ -217,6 +239,51 @@ sub hash_file {
     #sleep(rand(2));
 
     return $digest->b64digest;
+}
+
+sub fast_hash_file {
+    my ($file_name, $file_size) = @_;
+
+    my $fh;
+
+    my $block_size = $opt{fast_scan_blk}; 
+
+    return '0' if $file_size < $block_size * 2;
+
+    unless ( open( $fh, '<', $file_name ) ) {
+        print $STDERR "ERROR: Can't open '$file_name' for reading: $!\n";
+        return;
+    }
+
+    my @crc;
+
+    my $buf;
+
+    # crc head
+    if ($opt{fast_scan_head}){
+        read ($fh, $buf, $block_size);
+        push @crc, unpack("%32C*", $buf) %32767;
+    }
+
+    # crc mid
+    if ($opt{fast_scan_mid}){
+        seek ($fh, int(($file_size - $block_size) / 2), SEEK_SET);
+        read ($fh, $buf, $block_size );
+        push @crc, unpack("%32C*", $buf) %32767;
+    }
+
+    # crc tail
+    if ($opt{fast_scan_tail}){
+        seek ($fh, -$block_size, SEEK_END);
+        read ($fh, $buf, $block_size );
+        push @crc, unpack("%32C*", $buf) %32767;
+    }
+
+    close($fh);
+
+    my $crc = join('-', @crc);
+
+    return $crc;
 }
 
 #------------------------------------------------
