@@ -244,18 +244,20 @@ sub hash_file {
 
     my $hash_start_time = time;
 
-    unless ( open( F, '<', $file ) ) {
+    my $fh;
+
+    unless ( open( $fh, '<', $file ) ) {
         print $STDERR "ERROR: Can't open '$file' for reading: $!\n";
         return;
     }
 
-    binmode(F);
+    binmode($fh);
     my $digest = 
-        $opt{hash} eq 'MD5'     ? Digest::MD5->new->addfile(*F)         :
-        $opt{hash} eq 'SHA1'    ? Digest::SHA->new(256)->addfile(*F)    :
-        $opt{hash} eq 'SHA256'  ? Digest::SHA->new(256)->addfile(*F)    :
+        $opt{hash} eq 'MD5'     ? Digest::MD5->new->addfile($fh)         :
+        $opt{hash} eq 'SHA1'    ? Digest::SHA->new(256)->addfile($fh)    :
+        $opt{hash} eq 'SHA256'  ? Digest::SHA->new(256)->addfile($fh)    :
         die sprintf "wrong hash algorithm '%s'\n", $opt{hash}||'';
-    close(F);
+    close($fh);
 
     $file_processed->{stat}{time_hash} += time - $hash_start_time;
 
