@@ -61,13 +61,13 @@ my %opt = (
     hash            => 'MD5',
     follow_symlink  => 0,
     quiet           => undef,
-    progress        => 0,
-    verbose         => 1,
+    progress        => 1,
+    verbose         => 0,
     fast_scan       => 1,               # enable crc check before hash
     fast_scan_blk   => 4 * 1024 ** 1,   # 4KB
-    fast_scan_head  => 1,
-    fast_scan_mid   => 1,
-    fast_scan_tail  => 1,
+    fast_scan_head  => 1,               # enable head   block fast crc check
+    fast_scan_mid   => 1,               # enable middle block fast crc check
+    fast_scan_tail  => 1,               # enable last   block fast crc check
 );
 
 # global variables
@@ -89,9 +89,7 @@ my $file_processed = {
 # processing files through directory trees
 sub dir_crawler {
     my $dir = File::Spec->rel2abs(shift);
-    msg_section("crawling dir start: $dir");
     find( { wanted => \&file_crawler, follow => $opt{follow_symlink} }, $dir );
-    msg_section("crawling dir end: $dir");
 }
 
 # processing file
@@ -100,7 +98,7 @@ sub file_crawler {
 
     ADD_FILE: {
 
-        msg_verbose_ln($full_abs_path_file_name);
+        msg_verbose_ln($full_abs_path_file_name . ' : processing');
 
         # process only files
         last ADD_FILE unless -f $full_abs_path_file_name;
@@ -213,10 +211,8 @@ sub find_duplicates {
             push @{ $file_processed->{dup}{$file_size}{$hash} }, $file_name;
             $file_processed->{stat}{file_hash_calculated}++;
             $file_processed->{stat}{file_hash_size_calculated}+= $file_size;
-            msg_progress('*');
         }
 
-        msg_progress_ln ("");
 
         # remove unique hashes (no duplicate)
         for my $hash ( keys %{ $file_processed->{dup}{$file_size} } ) {
@@ -322,7 +318,7 @@ sub fast_hash_file {
 
 sub human_readable_size {
     my $num = shift;
-    return sprintf("%s B" , 0                       ) if (!defined $num);
+    return sprintf("%s B" , 0                       ) unless (defined $num);
     return sprintf("%s B" , round_size($num        )) if ($num < 1024**1);
     return sprintf("%s KB", round_size($num/1024**1)) if ($num < 1024**2);
     return sprintf("%s MB", round_size($num/1024**2)) if ($num < 1024**3);
@@ -344,7 +340,10 @@ sub round_size {
 #------------------------------------------------
 
 sub msg_section {
-    msg_out_ln($_[0]) if $opt{verbose} || $opt{progress};
+    if ($opt{verbose} || $opt{progress}){
+        msg_out_ln($_[0]);
+        msg_out_ln('');
+    }
 }
 
 sub msg_verbose {
@@ -458,7 +457,6 @@ sub stop_stat {
 }
 
 sub print_stat {
-    return if $opt{quiet};
     my $stat = $file_processed->{stat};
     printf $STDERR "\nFFDUP STATS:\n";
     printf $STDERR "   duplicated files      : %d\n", $stat->{file_duplicated};
@@ -516,8 +514,7 @@ OPTIONS
 
 AUTHOR
 Written by Luca Amore.
-For the latest updates, please visit <http://www.lucaamore.com>
-Git repository available at <http://github.com/...>
+For the latest updates, visit git repository available at <http://github.com/...>
 
 COPYRIGHT
 Copyright (c) 2014 Free Software Foundation, Inc.  License GPLv3+: GNU GPL version 3
@@ -562,7 +559,11 @@ sub check_init_params {
     }
 
     unless (scalar @DIRS) {
-            die "missing DIR to crawl\n";
+            die "missing DIR to crawl (try --help for more information)\n";
+    }
+
+    if ($opt{progress}){
+        $opt{verbose}=0;
     }
 
     if ($opt{verbose}){
@@ -620,17 +621,22 @@ MAIN: {
 
     msg_section("CRAWLING DIRECTORIES");
 
-    dir_crawler( $_ ) for @DIRS;
+    for my $dir (@DIRS){
+        msg_section("CRAWLING DIRECTORY: $dir");
+        dir_crawler( $dir );
+    }
 
-    msg_section("FIND DUPLICATES");
+    msg_section("FIND DUPLICATE FILES");
 
     find_duplicates;
+
+    msg_section("LIST DUPLICATE FILES");
 
     print_duplicates;
 
     stop_stat;
 
-    print_stat;
+    print_stat unless $opt{quiet};
 
     close_out_streams;
 
