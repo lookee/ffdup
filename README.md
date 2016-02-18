@@ -4,13 +4,13 @@ ffdup is a portable ultra fast light files finder written in Perl released as Fr
 
 #### What does ffdup do? ####
 
-It crawls directories and prints a list of duplicated files.
+It crawls directories and detects quickly duplicated files.
 
 #### More info about ffdup ####
 
 * it is written in Perl using only core modules
 * it uses a fast scan algorithm to detect duplicated files
-* it works greatly installed into nas with perl support (eg. Synology)
+* it works greatly installed into NAS with Perl support (eg. Synology, D-LINK 323)
 
 #### Quick Install ####
 
