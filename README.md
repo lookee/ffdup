@@ -12,17 +12,23 @@ It crawls directories and detects quickly duplicated files.
 * it uses a fast scan algorithm to detect duplicated files
 * it works greatly installed into NAS with Perl support (eg. Synology, D-LINK 323)
 
-#### Quick Install ####
+#### Install ####
 
+Quick Install
 ```
-wget http://ffdup.pl
+wget https://raw.githubusercontent.com/lookee/ffdup/master/ffdup.pl 
 chmod +x ffdup.pl
+```
+
+Project
+```
+git clone https://github.com/lookee/ffdup.git
 ```
 
 #### Example ####
 
 ```
-./ffdup /home/spoc/test
+./ffdup $DIR
 
 ```
 
