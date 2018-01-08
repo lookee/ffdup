@@ -6,7 +6,7 @@ my $VERSION = '0.0.6';
 #
 # ffdup
 #
-# Duplicate file finder written in Perl
+# Duplicate portable fast file finder written in Perl
 #
 # Copyright 2014, Luca Amore - luca.amore at gmail.com
 # <http://www.lucaamore.com>
