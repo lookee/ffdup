@@ -39,5 +39,7 @@ A directory tree maker with duplicates file is available under directory: t
 
 #### Author ###
 Luca Amore
+
 luca.amore at gmail.com
+
 http://www.lucaamore.com
