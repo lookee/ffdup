@@ -1,6 +1,6 @@
 ### ffdup ###
 
-ffdup is a portable ultra fast light files finder written in Perl released as Free Software.
+ffdup is a portable ultra fast light duplicate files finder written in Perl released as Free Software.
 
 #### What does ffdup do? ####
 
