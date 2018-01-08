@@ -6,7 +6,7 @@ my $VERSION = '0.0.6';
 #
 # ffdup
 #
-# Duplicate file finder witten in Perl
+# Duplicate file finder written in Perl
 #
 # Copyright 2014, Luca Amore - luca.amore at gmail.com
 # <http://www.lucaamore.com>
@@ -35,7 +35,7 @@ use warnings;
 use utf8;
 
 #use Cwd qw(cwd);
-use Data::Dumper;               
+use Data::Dumper;
 use Digest::MD5;                # core v5.7.3
 #use Digest::SHA;               # core v5.9.3
 use File::Basename;
@@ -54,7 +54,7 @@ my $STDERR  = *STDERR;
 
 # Set defaults
 my %opt = (
-    size_min        => 1024 ** 1,       # 1KB           
+    size_min        => 1024 ** 1,       # 1KB
     size_max        => undef,
     print_size      => undef,
     output          => undef,
@@ -109,7 +109,7 @@ sub file_crawler {
         # don't process more time the same file
         if ($opt{store_all_processed_full_abs_path_file_name}){
 
-            last ADD_FILE 
+            last ADD_FILE
                 if defined $file_processed->{name}{$full_abs_path_file_name};
         }
 
@@ -118,13 +118,13 @@ sub file_crawler {
         my $file_size = get_file_size($full_abs_path_file_name);
 
         # don't process zero size file
-        last ADD_FILE 
-            unless defined $file_size || 
+        last ADD_FILE
+            unless defined $file_size ||
                 $file_size == 0;
 
         # don't process files with size over the min/max window size
-        last ADD_FILE 
-            if 
+        last ADD_FILE
+            if
                 defined $opt{size_min} && $file_size < $opt{size_min} ||
                 defined $opt{size_max} && $file_size > $opt{size_max}
             ;
@@ -136,7 +136,7 @@ sub file_crawler {
 
         # store the filename with absolute path clustered by size as key
         push @{ $file_processed->{size}{$file_size} }, $full_abs_path_file_name;
-        
+
         # update stats
         $file_processed->{stat}{file_added}++;
         $file_processed->{stat}{file_size_added} += $file_size;
@@ -165,8 +165,8 @@ sub find_duplicates {
 
         msg_section(
             sprintf "processing hash: %s size : %s files: %d",
-                $opt{hash}, 
-                $file_size_human, 
+                $opt{hash},
+                $file_size_human,
                 scalar @files_with_same_size
         );
 
@@ -188,9 +188,9 @@ sub find_duplicates {
             }
 
             # only files with same crc
-            @files_with_same_size = 
+            @files_with_same_size =
                 map { @{$fast_hash->{$_}} }
-                    grep { scalar @{$fast_hash->{$_}} >1 } 
+                    grep { scalar @{$fast_hash->{$_}} >1 }
                         keys %{$fast_hash}
                 ;
 
@@ -216,14 +216,14 @@ sub find_duplicates {
 
         # remove unique hashes (no duplicate)
         for my $hash ( keys %{ $file_processed->{dup}{$file_size} } ) {
-            my $hash_multiplicity = 
+            my $hash_multiplicity =
                 scalar @{ $file_processed->{dup}{$file_size}{$hash} };
             if ( $hash_multiplicity == 1 ) {
                 delete $file_processed->{dup}{$file_size}{$hash};
             } else {
-                $file_processed->{stat}{file_duplicated} += 
+                $file_processed->{stat}{file_duplicated} +=
                     $hash_multiplicity - 1;
-                $file_processed->{stat}{file_size_duplicated} += 
+                $file_processed->{stat}{file_size_duplicated} +=
                     $file_size * ($hash_multiplicity -1);
             }
         }
@@ -248,7 +248,7 @@ sub hash_file {
     }
 
     binmode($fh);
-    my $digest = 
+    my $digest =
         $opt{hash} eq 'MD5'     ? Digest::MD5->new->addfile($fh)         :
         $opt{hash} eq 'SHA1'    ? Digest::SHA->new(256)->addfile($fh)    :
         $opt{hash} eq 'SHA256'  ? Digest::SHA->new(256)->addfile($fh)    :
@@ -269,7 +269,7 @@ sub fast_hash_file {
 
     my $hash_start_time = time;
 
-    my $block_size = $opt{fast_scan_blk}; 
+    my $block_size = $opt{fast_scan_blk};
 
     return '0' if $file_size < $block_size * 2;
 
@@ -313,7 +313,7 @@ sub fast_hash_file {
 }
 
 #------------------------------------------------
-# T O O L S 
+# T O O L S
 #------------------------------------------------
 
 sub human_readable_size {
@@ -379,7 +379,7 @@ sub init_out_streams {
     my $outfile = $opt{out};
 
     if (defined $outfile){
-        open($STDOUT, ">", $outfile) 
+        open($STDOUT, ">", $outfile)
             or die "cannot open > $outfile: $!";
     }
 }
@@ -400,8 +400,8 @@ sub print_duplicates {
 
         # every hash collect duplicates
         for my $hash ( sort keys %{ $file_processed->{dup}{$file_size} } ) {
-              
-            # files 
+
+            # files
             for my $file_name (
                 sort @{ $file_processed->{dup}{$file_size}{$hash} } )
             {
@@ -409,21 +409,21 @@ sub print_duplicates {
             }
             print $STDOUT "\n";
         }
-    }    
+    }
 }
 
 #------------------------------------------------
-# S T A T 
+# S T A T
 #------------------------------------------------
 
 sub init_stat {
     $file_processed->{stat}{time_start} = time;
-    for (qw(    file_processed 
-                file_added 
-                file_size_added 
+    for (qw(    file_processed
+                file_added
+                file_size_added
                 file_hash_calculated
                 file_fast_hash_calculated
-                file_hash_size_calculated 
+                file_hash_size_calculated
                 file_duplicated
                 file_size_duplicated
                 time_hash
@@ -437,21 +437,21 @@ sub stop_stat {
 
     $file_processed->{stat}{time_end} = time;
 
-    $file_processed->{stat}{time_execution} = 
-        $file_processed->{stat}{time_end} - 
+    $file_processed->{stat}{time_execution} =
+        $file_processed->{stat}{time_end} -
         $file_processed->{stat}{time_start};
 
     if ($file_processed->{stat}{time_execution} > 0){
-        $file_processed->{stat}{troughput_all} = 
-            1000 * 
-            $file_processed->{stat}{file_size_added} / 
+        $file_processed->{stat}{troughput_all} =
+            1000 *
+            $file_processed->{stat}{file_size_added} /
             $file_processed->{stat}{time_execution};
     }
 
     if ($file_processed->{stat}{time_hash} > 0){
-        $file_processed->{stat}{troughput_hash} = 
-            1000 * 
-            $file_processed->{stat}{file_hash_size_calculated} / 
+        $file_processed->{stat}{troughput_hash} =
+            1000 *
+            $file_processed->{stat}{file_hash_size_calculated} /
             $file_processed->{stat}{time_hash};
     }
 }
@@ -480,13 +480,13 @@ sub print_stat {
 }
 
 #------------------------------------------------
-# U S A G E 
+# U S A G E
 #------------------------------------------------
 sub usage {
     my $msg = shift;
-    
+
     print $STDERR $msg, "\n" if defined $msg;
-    
+
     print $STDERR <<EOTEXT;
 
 NAME
@@ -521,14 +521,14 @@ Copyright (c) 2014 Free Software Foundation, Inc.  License GPLv3+: GNU GPL versi
 or later <http://gnu.org/licenses/gpl.html>.
 This is free software: you are free to change and redistribute it. There is NO
 WARRANTY, to the extent permitted by law.
-                              
+
 EOTEXT
 
     exit 2;
 }
 
 #------------------------------------------------
-# O P T S 
+# O P T S
 #------------------------------------------------
 sub check_init_params {
 
@@ -548,7 +548,7 @@ sub check_init_params {
     if ($opt{hash} =~ /^SHA/){
         require Digest::SHA;
     }
- 
+
     if ($opt{cwd}){
         require Cwd;
         push @DIRS, Cwd::cwd;
@@ -576,7 +576,7 @@ sub check_init_params {
 
     $opt{store_all_processed_full_abs_path_file_name} = scalar @DIRS > 1;
 
-    # check dirs    
+    # check dirs
     for (@DIRS){
         unless ( -d $_ ) {
             die "cannot open root dir : $_\n";
