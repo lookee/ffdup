@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-my $VERSION = '0.0.6';
+my $VERSION = '0.0.7';
 
 ############################################################################
 #
@@ -442,14 +442,14 @@ sub stop_stat {
         $file_processed->{stat}{time_start};
 
     if ($file_processed->{stat}{time_execution} > 0){
-        $file_processed->{stat}{troughput_all} =
+        $file_processed->{stat}{throughput_all} =
             1000 *
             $file_processed->{stat}{file_size_added} /
             $file_processed->{stat}{time_execution};
     }
 
     if ($file_processed->{stat}{time_hash} > 0){
-        $file_processed->{stat}{troughput_hash} =
+        $file_processed->{stat}{throughput_hash} =
             1000 *
             $file_processed->{stat}{file_hash_size_calculated} /
             $file_processed->{stat}{time_hash};
@@ -467,14 +467,14 @@ sub print_stat {
     printf $STDERR "   execution time        : %.3f ms\n", $file_processed->{stat}{time_execution};
     printf $STDERR "   hash time             : %.3f ms\n", $file_processed->{stat}{time_hash};
     printf $STDERR "   hash fast time        : %.3f ms\n", $file_processed->{stat}{time_fast_hash};
-    printf $STDERR "   throughput            : %s\\s\n", human_readable_size($file_processed->{stat}{troughput_all})
-        if defined $file_processed->{stat}{troughput_all};
+    printf $STDERR "   throughput            : %s\\s\n", human_readable_size($file_processed->{stat}{throughput_all})
+        if defined $file_processed->{stat}{throughput_all};
     printf $STDERR "   hash fast calulated   : %d\n", $stat->{file_fast_hash_calculated};
     printf $STDERR "   hash fast filtered    : %d\n", $stat->{file_fast_hash_calculated} - $stat->{file_hash_calculated} ;
     printf $STDERR "   hash calulated        : %d\n", $stat->{file_hash_calculated};
     printf $STDERR "   hash calculated size  : %s\n", human_readable_size($stat->{file_hash_size_calculated});
-    printf $STDERR "   hash throughput       : %s\\s\n", human_readable_size($file_processed->{stat}{troughput_hash})
-        if defined $file_processed->{stat}{troughput_all};
+    printf $STDERR "   hash throughput       : %s\\s\n", human_readable_size($file_processed->{stat}{throughput_hash})
+        if defined $file_processed->{stat}{throughput_all};
     printf $STDERR "   hash algorithm        : %s\n", $opt{hash};
     printf $STDERR "\n";
 }
