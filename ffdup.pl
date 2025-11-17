@@ -9,7 +9,7 @@ my $VERSION = '0.0.8';
 # Duplicate portable fast file finder written in Perl
 #
 # Copyright 2014, Luca Amore - luca.amore at gmail.com
-# <http://www.lucaamore.com>
+# <https://www.lucaamore.com>
 #
 # Git repository available at http://github.com/...
 #
