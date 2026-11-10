@@ -1,3 +1,5 @@
+![ffdup — cinematic cover with twin data monoliths and a cyan scan beam](docs/images/ffdup-cover.png)
+
 ### ffdup ###
 
 ffdup is a portable ultra fast light duplicate file finder written in Perl released as Free Software.
