@@ -26,14 +26,20 @@ The examples below use a Unix-like shell. On NAS devices, make sure Perl is inst
 
 ## Installation
 
-### Download the script
+Choose **one** of the following installation methods. Downloading the script and cloning the repository are alternatives; either method is sufficient to run ffdup.
+
+### Option A: Download the script
+
+For a quick installation, download just the standalone script:
 
 ```sh
 wget https://raw.githubusercontent.com/lookee/ffdup/master/ffdup.pl
 chmod +x ffdup.pl
 ```
 
-### Clone the repository
+### Option B: Clone the repository
+
+Alternatively, clone the full repository to include the source, license, and test-data generator:
 
 ```sh
 git clone https://github.com/lookee/ffdup.git
@@ -41,7 +47,7 @@ cd ffdup
 chmod +x ffdup.pl
 ```
 
-Run the script with `./ffdup.pl`, or use `perl ffdup.pl` to invoke Perl explicitly.
+After completing either option, run the script with `./ffdup.pl`, or use `perl ffdup.pl` to invoke Perl explicitly.
 
 ## Quick start
 
